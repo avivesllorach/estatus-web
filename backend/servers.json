@@ -1,0 +1,627 @@
+[
+  {
+    "id": "1",
+    "name": "vCENTER",
+    "ip": "172.17.1.1",
+    "dnsAddress": "amdahl.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 27,
+          "name": "LOG"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2",
+    "name": "LLULL",
+    "ip": "172.17.1.3",
+    "dnsAddress": "llull.eada.es"
+  },
+  {
+    "id": "3",
+    "name": "VONNEUMANN",
+    "ip": "172.17.1.5",
+    "dnsAddress": "vonneumann.eada.es"
+  },
+  {
+    "id": "4",
+    "name": "CONTROLADORA WIFI",
+    "ip": "10.10.69.5",
+    "dnsAddress": "ap-bcn-controladora.eada.es"
+  },
+  {
+    "id": "5",
+    "name": "TURING",
+    "ip": "172.17.3.2",
+    "dnsAddress": "turing.eada.es"
+  },
+  {
+    "id": "6",
+    "name": "LOVELACE",
+    "ip": "172.17.3.4",
+    "dnsAddress": "lovelace.eada.es"
+  },
+  {
+    "id": "7",
+    "name": "CONTROLADORA WIFI",
+    "ip": "10.30.69.5",
+    "dnsAddress": "ap-prov-controladora.eada.es"
+  },
+  {
+    "id": "8",
+    "name": "RITCHIE",
+    "ip": "172.17.1.55",
+    "dnsAddress": "ritchie.eada.es",
+    "netapp": {
+      "enabled": true,
+      "username": "admin_api",
+      "password": "Impala2020.",
+      "luns": [
+        {
+          "name": "DEV2",
+          "path": "/vol/VOL_ESX_DEV2/LUN_ESX_DEV2"
+        },
+        {
+          "name": "PROD2",
+          "path": "/vol/VOL_ESX_PROD2/LUN_ESX_PROD2"
+        },
+        {
+          "name": "DTI2",
+          "path": "/vol/VOL_ESX_DTI2/LUN_ESX_DTI2"
+        }
+      ]
+    }
+  },
+  {
+    "id": "9",
+    "name": "TESLA",
+    "ip": "172.17.1.60",
+    "dnsAddress": "tesla.eada.es",
+    "netapp": {
+      "enabled": true,
+      "apiType": "zapi",
+      "username": "admin_api",
+      "password": "spkw47vFcU",
+      "luns": [
+        {
+          "name": "DEV",
+          "path": "/vol/VOL_ESX_DEV/LUN_ESX_DEV"
+        },
+        {
+          "name": "PROD",
+          "path": "/vol/VOL_ESX_PROD/LUN_ESX_PROD"
+        },
+        {
+          "name": "DTI",
+          "path": "/vol/VOL_ESX_DTI/LUN_ESX_DTI"
+        }
+      ]
+    }
+  },
+  {
+    "id": "10",
+    "name": "KERNIGHAN",
+    "ip": "172.17.3.60",
+    "dnsAddress": "kernighan.eada.es",
+    "netapp": {
+      "enabled": true,
+      "username": "admin_api",
+      "password": "Impala2020.",
+      "luns": [
+        {
+          "name": "DEV2",
+          "path": "/vol/VOL_ESX_DEV2/VOL_ESX_DEV2"
+        },
+        {
+          "name": "PROD2",
+          "path": "/vol/VOL_ESX_PROD2/VOL_ESX_PROD2"
+        },
+        {
+          "name": "DTI2",
+          "path": "/vol/VOL_ESX_DTI2/VOL_ESX_DTI2"
+        }
+      ]
+    }
+  },
+  {
+    "id": "11",
+    "name": "GAUSS",
+    "ip": "172.17.3.55",
+    "dnsAddress": "gauss.eada.es",
+    "netapp": {
+      "enabled": true,
+      "username": "admin_api",
+      "password": "Impala2020.",
+      "luns": [
+        {
+          "name": "DEV",
+          "path": "/vol/LUN_ESX_DEV/LUN_ESX_DEV"
+        },
+        {
+          "name": "PROD",
+          "path": "/vol/LUN_ESX_PROD/LUN_ESX_PROD"
+        },
+        {
+          "name": "DTI",
+          "path": "/vol/LUN_ESX_DTI/LUN_ESX_DTI"
+        }
+      ]
+    }
+  },
+  {
+    "id": "12",
+    "name": "IVERSON",
+    "ip": "192.1.1.38",
+    "dnsAddress": "iverson.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "13",
+    "name": "FORRESTER",
+    "ip": "192.1.50.23",
+    "dnsAddress": "forrester.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "14",
+    "name": "HAMMING3",
+    "ip": "192.1.100.21",
+    "dnsAddress": "hamming.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "15",
+    "name": "BARTON2",
+    "ip": "192.1.1.27",
+    "dnsAddress": "barton2.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 37,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "16",
+    "name": "ECKERT",
+    "ip": "192.1.50.25",
+    "dnsAddress": "eckert.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "17",
+    "name": "MOODLE-05",
+    "ip": "192.1.1.45",
+    "dnsAddress": "moodle-05.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "18",
+    "name": "MOODLE-06",
+    "ip": "192.1.1.46",
+    "dnsAddress": "moodle-06.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "19",
+    "name": "MOODLE-07",
+    "ip": "192.1.1.47",
+    "dnsAddress": "moodle-07.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "20",
+    "name": "MOODLE-08",
+    "ip": "192.1.1.48",
+    "dnsAddress": "moodle-08.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        },
+        {
+          "index": 56,
+          "name": "M-DATA"
+        }
+      ]
+    }
+  },
+  {
+    "id": "21",
+    "name": "MOODLE-09",
+    "ip": "192.1.1.49",
+    "dnsAddress": "moodle-09.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "22",
+    "name": "MILHON",
+    "ip": "192.1.100.9",
+    "dnsAddress": "milhon.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "23",
+    "name": "MILHON2",
+    "ip": "192.1.100.10",
+    "dnsAddress": "milhon2.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "24",
+    "name": "WILSON",
+    "ip": "192.1.150.6",
+    "dnsAddress": "wilson.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 31,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "25",
+    "name": "GOLDBERG",
+    "ip": "172.17.1.12",
+    "dnsAddress": "goldberg.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 67,
+          "name": "ZOOM"
+        }
+      ]
+    }
+  },
+  {
+    "id": "26",
+    "name": "CODD3",
+    "ip": "192.1.100.28",
+    "dnsAddress": "codd.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "27",
+    "name": "NOYCE",
+    "ip": "192.1.150.3",
+    "dnsAddress": "noyce.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 31,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "28",
+    "name": "DENNIS",
+    "ip": "192.1.100.20",
+    "dnsAddress": "dennis.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "29",
+    "name": "KLEINROCK2",
+    "ip": "192.1.100.16",
+    "dnsAddress": "kleinrock2.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        },
+        {
+          "index": 63,
+          "name": "FILES"
+        }
+      ]
+    }
+  },
+  {
+    "id": "30",
+    "name": "THOMPSON",
+    "ip": "192.1.100.18",
+    "dnsAddress": "thompson.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "31",
+    "name": "WOZNIAK",
+    "ip": "192.1.150.17",
+    "dnsAddress": "wozniak.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "32",
+    "name": "HOARE",
+    "ip": "10.100.1.1",
+    "dnsAddress": "hoare.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 1,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "33",
+    "name": "DIJKSTRA",
+    "ip": "172.16.1.1",
+    "dnsAddress": "dijkstra.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 1,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "34",
+    "name": "HAMILTON",
+    "ip": "10.230.1.1",
+    "dnsAddress": "hamilton.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 1,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "35",
+    "name": "JOHNSON",
+    "ip": "172.16.3.1",
+    "dnsAddress": "johnson.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 1,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "36",
+    "name": "ARG COMMVAULT",
+    "ip": "172.17.1.13",
+    "dnsAddress": "test-commvault.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 43,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "37",
+    "name": "PROV COMMVAULT",
+    "ip": "172.17.3.15",
+    "dnsAddress": "commvault-prov.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 43,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "38",
+    "name": "RADIUS",
+    "ip": "192.1.1.50",
+    "dnsAddress": "radius.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 31,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "39",
+    "name": "RADIUS3",
+    "ip": "192.1.3.150",
+    "dnsAddress": "scherbius3.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 31,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "40",
+    "name": "CLARK2",
+    "ip": "192.1.1.35",
+    "dnsAddress": "clark2.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "41",
+    "name": "HUFFMAN2",
+    "ip": "192.1.100.34",
+    "dnsAddress": "huffman2.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  },
+  {
+    "id": "42",
+    "name": "WESCOFF2",
+    "ip": "192.1.1.7",
+    "dnsAddress": "wescoff.eada.es",
+    "snmp": {
+      "enabled": true,
+      "disks": [
+        {
+          "index": 36,
+          "name": "💾"
+        }
+      ]
+    }
+  }
+]
