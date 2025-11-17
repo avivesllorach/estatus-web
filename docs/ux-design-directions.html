@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatus Web Config UI - Design Direction Mockups</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .nav-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            padding: 1rem 2rem;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            background: #334155;
+            border: none;
+            border-radius: 6px;
+            color: #e2e8f0;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: #475569;
+        }
+
+        .nav-btn.active {
+            background: #2563eb;
+        }
+
+        .direction-indicator {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .mockup-container {
+            margin-top: 80px;
+            padding: 2rem;
+            min-height: calc(100vh - 80px);
+        }
+
+        .direction-wrapper {
+            display: none;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .direction-wrapper.active {
+            display: block;
+        }
+
+        .direction-info {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .direction-info h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .direction-info p {
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .direction-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: #334155;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Mockup Frame */
+        .mockup-frame {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            border: 1px solid #334155;
+        }
+
+        /* Common Config UI Styles */
+        .config-layout {
+            display: flex;
+            height: 800px;
+            font-family: 'Inter', sans-serif;
+            background: #fafafa;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: white;
+            border-right: 1px solid #d4d4d4;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e5e5;
+            background: white;
+        }
+
+        .sidebar-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 0.75rem;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 0.5rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .section-label {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #525252;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .server-list-item {
+            padding: 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 0.875rem;
+            color: #171717;
+        }
+
+        .server-list-item:hover {
+            background: #f5f5f5;
+        }
+
+        .server-list-item.active {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        .server-name {
+            font-weight: 500;
+            margin-bottom: 0.125rem;
+        }
+
+        .server-ip {
+            font-size: 0.75rem;
+            color: #525252;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Main Panel Styles */
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fafafa;
+        }
+
+        .panel-header {
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #171717;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #525252;
+            border: 1px solid #d4d4d4;
+        }
+
+        .btn-destructive {
+            background: white;
+            color: #dc2626;
+            border: 1px solid #d4d4d4;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .form-section {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #171717;
+            margin-bottom: 0.375rem;
+        }
+
+        .form-input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d4d4d4;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: #171717;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-helper {
+            font-size: 0.75rem;
+            color: #525252;
+            margin-top: 0.25rem;
+        }
+
+        .collapsible-section {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .collapsible-header:hover {
+            background: #f5f5f5;
+        }
+
+        .collapsible-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #171717;
+        }
+
+        .collapsible-content {
+            padding: 1.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            font-size: 0.875rem;
+            color: #171717;
+            cursor: pointer;
+        }
+
+        /* Direction-specific styles */
+        .direction-1 .sidebar { width: 280px; }
+        .direction-2 .sidebar { width: 320px; }
+        .direction-3 .sidebar { width: 240px; }
+        .direction-4 .sidebar { width: 300px; }
+
+        /* Direction 2: Dense Information */
+        .direction-2 .server-list-item {
+            padding: 0.5rem 0.75rem;
+        }
+        .direction-2 .form-section {
+            padding: 1rem;
+        }
+
+        /* Direction 3: Spacious & Minimal */
+        .direction-3 .server-list-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .direction-3 .form-section {
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Direction 4: Compact with Tabs */
+        .direction-4 .tab-nav {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background: #f5f5f5;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .direction-4 .tab-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #525252;
+            cursor: pointer;
+        }
+
+        .direction-4 .tab-btn.active {
+            background: white;
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <div>
+            <h1>Estatus Web - Config UI Design Directions</h1>
+            <div class="direction-indicator">Direction <span id="current-direction">1</span> of 4</div>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="changeDirection(-1)">← Previous</button>
+            <button class="nav-btn" onclick="changeDirection(1)">Next →</button>
+        </div>
+    </div>
+
+    <div class="mockup-container">
+        <!-- Direction 1: Balanced Professional -->
+        <div class="direction-wrapper active" data-direction="1">
+            <div class="direction-info">
+                <h2>Direction 1: Balanced Professional</h2>
+                <p><strong>Layout:</strong> Standard split-view (280px sidebar + flex main panel)</p>
+                <p><strong>Density:</strong> Balanced - Comfortable spacing without wasting space</p>
+                <p><strong>Best for:</strong> Default option - works well for all use cases, familiar to admin tool users</p>
+                <div class="direction-tags">
+                    <span class="tag">Standard Layout</span>
+                    <span class="tag">Moderate Density</span>
+                    <span class="tag">Clear Hierarchy</span>
+                </div>
+            </div>
+
+            <div class="mockup-frame">
+                <div class="config-layout direction-1">
+                    <div class="sidebar">
+                        <div class="sidebar-header">
+                            <div class="sidebar-title">Servers</div>
+                            <button class="add-btn">+ Add Server</button>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="server-list-item active">
+                                <div class="server-name">ARAGÓ-01</div>
+                                <div class="server-ip">192.168.1.10</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-02</div>
+                                <div class="server-ip">192.168.1.11</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-01</div>
+                                <div class="server-ip">192.168.1.20</div>
+                            </div>
+                            <div class="section-label">Groups</div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">Edit Server: ARAGÓ-01</div>
+                            <div class="header-actions">
+                                <button class="btn btn-destructive">Delete</button>
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Save Server</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div class="form-section">
+                                <div class="form-section-title">Basic Information</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Server ID</label>
+                                        <input type="text" class="form-input" value="server-001" />
+                                        <div class="form-helper">Unique identifier</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Server Name</label>
+                                        <input type="text" class="form-input" value="ARAGÓ-01" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">IP Address</label>
+                                        <input type="text" class="form-input" value="192.168.1.10" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">DNS Address</label>
+                                        <input type="text" class="form-input" value="arago-01.local" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">SNMP Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                                <div class="collapsible-content">
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" class="checkbox" id="snmp-enabled" checked />
+                                        <label for="snmp-enabled" class="checkbox-label">Enable SNMP monitoring</label>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Storage Index</label>
+                                            <input type="text" class="form-input" value="1" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Disk Name</label>
+                                            <input type="text" class="form-input" value="C:\" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">NetApp Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direction 2: Dense Information -->
+        <div class="direction-wrapper" data-direction="2">
+            <div class="direction-info">
+                <h2>Direction 2: Dense Information</h2>
+                <p><strong>Layout:</strong> Wider sidebar (320px) with tighter spacing</p>
+                <p><strong>Density:</strong> Dense - More information visible, less scrolling</p>
+                <p><strong>Best for:</strong> Power users managing many servers, scanning quickly through lists</p>
+                <div class="direction-tags">
+                    <span class="tag">Information Dense</span>
+                    <span class="tag">Tight Spacing</span>
+                    <span class="tag">Power User</span>
+                </div>
+            </div>
+
+            <div class="mockup-frame">
+                <div class="config-layout direction-2">
+                    <div class="sidebar">
+                        <div class="sidebar-header">
+                            <div class="sidebar-title">Servers (12)</div>
+                            <button class="add-btn">+ Add</button>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="server-list-item active">
+                                <div class="server-name">ARAGÓ-01</div>
+                                <div class="server-ip">192.168.1.10</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-02</div>
+                                <div class="server-ip">192.168.1.11</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-03</div>
+                                <div class="server-ip">192.168.1.12</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-01</div>
+                                <div class="server-ip">192.168.1.20</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-02</div>
+                                <div class="server-ip">192.168.1.21</div>
+                            </div>
+                            <div class="section-label">Groups</div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ (4 servers)</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA (3 servers)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">ARAGÓ-01</div>
+                            <div class="header-actions">
+                                <button class="btn btn-destructive">Delete</button>
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Save</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div class="form-section">
+                                <div class="form-section-title">Basic Information</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Server ID</label>
+                                        <input type="text" class="form-input" value="server-001" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-input" value="ARAGÓ-01" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">IP Address</label>
+                                        <input type="text" class="form-input" value="192.168.1.10" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">DNS</label>
+                                        <input type="text" class="form-input" value="arago-01.local" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">SNMP Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                                <div class="collapsible-content">
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" class="checkbox" checked />
+                                        <label class="checkbox-label">Enable SNMP</label>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Index</label>
+                                            <input type="text" class="form-input" value="1" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-input" value="C:\" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">NetApp Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direction 3: Spacious & Minimal -->
+        <div class="direction-wrapper" data-direction="3">
+            <div class="direction-info">
+                <h2>Direction 3: Spacious & Minimal</h2>
+                <p><strong>Layout:</strong> Narrow sidebar (240px) with generous spacing</p>
+                <p><strong>Density:</strong> Spacious - Breathing room, less visual clutter</p>
+                <p><strong>Best for:</strong> Focused editing sessions, reducing cognitive load, cleaner aesthetic</p>
+                <div class="direction-tags">
+                    <span class="tag">Spacious</span>
+                    <span class="tag">Minimal</span>
+                    <span class="tag">Focused</span>
+                </div>
+            </div>
+
+            <div class="mockup-frame">
+                <div class="config-layout direction-3">
+                    <div class="sidebar">
+                        <div class="sidebar-header">
+                            <div class="sidebar-title">Servers</div>
+                            <button class="add-btn">+ Add Server</button>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="server-list-item active">
+                                <div class="server-name">ARAGÓ-01</div>
+                                <div class="server-ip">192.168.1.10</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-02</div>
+                                <div class="server-ip">192.168.1.11</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-01</div>
+                                <div class="server-ip">192.168.1.20</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">Edit Server</div>
+                            <div class="header-actions">
+                                <button class="btn btn-destructive">Delete</button>
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Save Server</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div class="form-section">
+                                <div class="form-section-title">Basic Information</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Server ID</label>
+                                        <input type="text" class="form-input" value="server-001" />
+                                        <div class="form-helper">Unique identifier for this server</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Server Name</label>
+                                        <input type="text" class="form-input" value="ARAGÓ-01" />
+                                        <div class="form-helper">Display name in dashboard</div>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">IP Address</label>
+                                        <input type="text" class="form-input" value="192.168.1.10" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">DNS Address</label>
+                                        <input type="text" class="form-input" value="arago-01.local" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">SNMP Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">NetApp Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direction 4: Tabbed Compact -->
+        <div class="direction-wrapper" data-direction="4">
+            <div class="direction-info">
+                <h2>Direction 4: Tabbed Organization</h2>
+                <p><strong>Layout:</strong> Standard sidebar (300px) with tabbed sections in sidebar</p>
+                <p><strong>Density:</strong> Organized - Tabs separate Servers and Groups, cleaner switching</p>
+                <p><strong>Best for:</strong> Clear separation between server editing and group management</p>
+                <div class="direction-tags">
+                    <span class="tag">Tabbed Interface</span>
+                    <span class="tag">Organized</span>
+                    <span class="tag">Clear Separation</span>
+                </div>
+            </div>
+
+            <div class="mockup-frame">
+                <div class="config-layout direction-4">
+                    <div class="sidebar">
+                        <div class="tab-nav">
+                            <button class="tab-btn active">Servers</button>
+                            <button class="tab-btn">Groups</button>
+                        </div>
+                        <div class="sidebar-header">
+                            <button class="add-btn">+ Add Server</button>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="server-list-item active">
+                                <div class="server-name">ARAGÓ-01</div>
+                                <div class="server-ip">192.168.1.10</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-02</div>
+                                <div class="server-ip">192.168.1.11</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">ARAGÓ-03</div>
+                                <div class="server-ip">192.168.1.12</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-01</div>
+                                <div class="server-ip">192.168.1.20</div>
+                            </div>
+                            <div class="server-list-item">
+                                <div class="server-name">PROVENÇA-02</div>
+                                <div class="server-ip">192.168.1.21</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">Edit Server: ARAGÓ-01</div>
+                            <div class="header-actions">
+                                <button class="btn btn-destructive">Delete</button>
+                                <button class="btn btn-secondary">Cancel</button>
+                                <button class="btn btn-primary">Save Server</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div class="form-section">
+                                <div class="form-section-title">Basic Information</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Server ID</label>
+                                        <input type="text" class="form-input" value="server-001" />
+                                        <div class="form-helper">Unique identifier</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Server Name</label>
+                                        <input type="text" class="form-input" value="ARAGÓ-01" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">IP Address</label>
+                                        <input type="text" class="form-input" value="192.168.1.10" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">DNS Address</label>
+                                        <input type="text" class="form-input" value="arago-01.local" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Group Assignment</label>
+                                        <input type="text" class="form-input" value="ARAGÓ" />
+                                        <div class="form-helper">Dashboard group for this server</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">SNMP Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                                <div class="collapsible-content">
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" class="checkbox" checked />
+                                        <label class="checkbox-label">Enable SNMP monitoring</label>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Storage Index</label>
+                                            <input type="text" class="form-input" value="1" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Disk Name</label>
+                                            <input type="text" class="form-input" value="C:\" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-section">
+                                <div class="collapsible-header">
+                                    <div class="collapsible-title">NetApp Configuration</div>
+                                    <div>▼</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDirection = 1;
+        const totalDirections = 4;
+
+        function changeDirection(delta) {
+            currentDirection += delta;
+            if (currentDirection < 1) currentDirection = totalDirections;
+            if (currentDirection > totalDirections) currentDirection = 1;
+
+            document.querySelectorAll('.direction-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('active');
+            });
+
+            document.querySelector(`[data-direction="${currentDirection}"]`).classList.add('active');
+            document.getElementById('current-direction').textContent = currentDirection;
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeDirection(-1);
+            if (e.key === 'ArrowRight') changeDirection(1);
+        });
+    </script>
+</body>
+</html>

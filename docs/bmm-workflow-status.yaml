@@ -1,0 +1,113 @@
+# Workflow Status Template
+
+# This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/product-brief.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2025-11-17"
+project: "estatus-web"
+project_type: "brownfield"
+selected_track: "bmad-method"
+field_type: "brownfield"
+workflow_path: ".bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
+
+workflow_status:
+  # Prerequisites
+  - id: "document-project"
+    name: "Document Existing Project"
+    status: "docs/index.md"
+    agent: "analyst"
+    command: "/bmad:bmm:workflows:document-project"
+    purpose: "Understand existing codebase before planning"
+    note: "Prerequisite for brownfield projects"
+    completed: "2025-11-17"
+
+  # Phase 1 - Planning
+  - id: "prd"
+    name: "Product Requirements Document"
+    status: "docs/prd.md"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:prd"
+    purpose: "Define requirements for new features/changes"
+    note: "Must consider existing system constraints"
+    completed: "2025-11-17"
+
+  - id: "create-design"
+    name: "UX Design"
+    status: "docs/ux-design-specification.md"
+    agent: "ux-designer"
+    command: "/bmad:bmm:workflows:create-ux-design"
+    note: "Required if UI changes are part of the project"
+    completed: "2025-11-17"
+
+  - id: "create-epics-and-stories-after-ux"
+    name: "Create Epics and Stories (After UX)"
+    status: "docs/epics.md"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:create-epics-and-stories"
+    note: "4 epics, 34 stories, 100% FR coverage"
+    completed: "2025-11-17"
+
+  #After creating epics.md, run *validate-prd again for complete validation
+  - id: "validate-prd"
+    name: "Validate PRD"
+    status: "docs/prd-validation-report-2025-11-17.md"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:validate-prd"
+    note: "98.3% pass rate, 100% FR coverage, ready for architecture"
+    completed: "2025-11-17"
+
+  # Phase 2 - Solutioning
+  - id: "create-architecture"
+    name: "Architecture Design"
+    status: "optional"
+    agent: "architect"
+    command: "/bmad:bmm:workflows:architecture"
+    purpose: "Solution design for brownfield integration"
+    note: "HIGHLY RECOMMENDED: Distills massive brownfield context into focused solution design"
+
+  - id: "create-epics-and-stories-final"
+    name: "Create Epics and Stories (Final)"
+    status: "required"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:create-epics-and-stories"
+    purpose: "Final epic breakdown with full context (PRD + UX + Architecture)"
+
+  - id: "test-design"
+    name: "Test Design"
+    status: "recommended"
+    agent: "tea"
+    command: "/bmad:bmm:workflows:test-design"
+    purpose: "System-level testability review"
+
+  - id: "validate-architecture"
+    name: "Validate Architecture"
+    status: "optional"
+    agent: "architect"
+    command: "/bmad:bmm:workflows:validate-architecture"
+
+  - id: "implementation-readiness"
+    name: "Implementation Readiness Gate"
+    status: "required"
+    agent: "architect"
+    command: "/bmad:bmm:workflows:implementation-readiness"
+    purpose: "Validates PRD + UX + Architecture + Epics cohesion before implementation"
+
+  # Phase 3 - Implementation
+  - id: "sprint-planning"
+    name: "Sprint Planning"
+    status: "required"
+    agent: "sm"
+    command: "/bmad:bmm:workflows:sprint-planning"
+    purpose: "Creates sprint plan with stories"
