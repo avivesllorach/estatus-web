@@ -1,4 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { ServerListItem } from './ServerListItem';
 import { GroupListItem } from './GroupListItem';
 import { ServerData } from '@/services/api';
@@ -69,6 +71,18 @@ export function Sidebar({
         <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
           SERVERS
         </h3>
+
+        {/* Add Server button */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full mb-3"
+          onClick={() => {}}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Server
+        </Button>
+
         {error ? (
           <div className="px-4 py-6 text-sm text-red-600 text-center">
             {error}
@@ -108,6 +122,18 @@ export function Sidebar({
         <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
           GROUPS
         </h3>
+
+        {/* Add Group button */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full mb-3"
+          onClick={() => {}}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Group
+        </Button>
+
         {groups.length === 0 ? (
           <div className="px-4 py-6 text-sm text-gray-500 text-center">
             No groups created yet.

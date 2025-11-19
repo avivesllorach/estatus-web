@@ -43,7 +43,7 @@ development_status:
   1-4-implement-server-selection-with-active-state: done
   1-5-display-group-list-in-sidebar: done
   1-6-create-empty-state-for-main-panel: done
-  1-7-add-add-server-and-add-group-buttons-to-sidebar: backlog
+  1-7-add-add-server-and-add-group-buttons-to-sidebar: done
   epic-1-retrospective: optional
 
   epic-2: backlog
