@@ -358,6 +358,39 @@ export class PingService extends EventEmitter {
     console.log('Monitoring service stopped');
   }
 
+  /**
+   * Reset the ping service state for testing
+   * Stops all monitoring, clears all intervals, and resets internal state
+   *
+   * Usage in tests:
+   * afterEach(() => {
+   *   pingService.reset();
+   * });
+   */
+  public reset(): void {
+    // Stop monitoring if running
+    if (this.isRunning) {
+      this.isRunning = false;
+    }
+
+    // Clear all ping promises
+    this.pingPromises.clear();
+
+    // Clear all SNMP/LUN monitoring intervals
+    this.snmpIntervals.forEach(interval => {
+      clearInterval(interval);
+    });
+    this.snmpIntervals.clear();
+
+    // Clear server status map
+    this.serverStatusMap.clear();
+
+    // Remove all event listeners
+    this.removeAllListeners();
+
+    console.log('[TEST] PingService reset complete');
+  }
+
   public getAllServerStatus(): ServerStatus[] {
     return Array.from(this.serverStatusMap.values());
   }

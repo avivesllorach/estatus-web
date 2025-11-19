@@ -1,12 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import * as fs from 'fs';
-import * as path from 'path';
 import { PingService } from './services/pingService';
 import { createServerRoutes } from './routes/servers';
 import { createEventsRoute } from './routes/events';
+import configRoutes from './routes/config';
 import { ServerConfig } from './types/server';
-import { PORT, CORS_ORIGIN } from './config/constants';
+import { PORT, CORS_ORIGIN, CONFIG_PATHS, isTestMode } from './config/constants';
 
 class ServerMonitoringApp {
   private app: express.Application;
@@ -42,11 +42,15 @@ class ServerMonitoringApp {
 
   private loadServers(): void {
     try {
-      const serversPath = path.join(__dirname, '../servers.json');
+      const serversPath = CONFIG_PATHS.servers;
       const serversData = fs.readFileSync(serversPath, 'utf8');
       const servers: ServerConfig[] = JSON.parse(serversData);
 
-      console.log(`Loaded ${servers.length} servers from configuration`);
+      if (isTestMode()) {
+        console.log(`[TEST MODE] Loaded ${servers.length} servers from ${serversPath}`);
+      } else {
+        console.log(`Loaded ${servers.length} servers from configuration`);
+      }
 
       // Initialize ping service with loaded servers
       this.pingService = new PingService(servers);
@@ -74,6 +78,7 @@ class ServerMonitoringApp {
     // API routes
     this.app.use('/api/servers', createServerRoutes(this.pingService));
     this.app.use('/api/events', createEventsRoute(this.pingService));
+    this.app.use('/api/config', configRoutes);
 
     // 404 handler for unknown routes
     this.app.use('*', (req, res) => {

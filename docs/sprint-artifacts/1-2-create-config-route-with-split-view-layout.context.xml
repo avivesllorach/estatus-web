@@ -1,0 +1,222 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Create `/config` Route with Split-View Layout</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-2-create-config-route-with-split-view-layout.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to navigate to `/config` and see a split-view layout</iWant>
+    <soThat>I can access the configuration interface</soThat>
+    <tasks>
+      - Install react-router-dom dependency
+      - Configure BrowserRouter in App.tsx
+      - Create route structure with `/` (Dashboard) and `/config` routes
+      - Verify browser navigation works between routes
+      - Create src/pages/ConfigPage.tsx route component
+      - Create src/components/config/ConfigLayout.tsx with split-view container
+      - Implement fixed 280px sidebar and flexible main panel
+      - Add page header with "Configuration" title and "Back to Dashboard" link
+      - Apply styling: white sidebar, gray background (#fafafa) main panel, border-right on sidebar
+      - Create src/components/config/Sidebar.tsx component
+      - Add "SERVERS" section label (uppercase, 12px, gray-600)
+      - Add "GROUPS" section label (uppercase, 12px, gray-600)
+      - Apply spacing and styling per UX Design spec
+      - Create src/components/config/MainPanel.tsx component
+      - Apply light gray background (#fafafa)
+      - Set up flexible width with proper padding
+      - Prepare container for future form content
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <given>I am on the dashboard at `/`</given>
+      <when>I navigate to `/config` in the browser URL bar</when>
+      <then>I see the configuration page with split-view layout</then>
+    </criterion>
+    <criterion id="AC2">
+      <description>The layout consists of: Left sidebar (280px fixed width, white background, gray border-right), Right main panel (Flexible width, light gray background #fafafa), Page header with "Configuration" title (H1, 24px, bold), "Back to Dashboard" link in header that navigates to `/`</description>
+    </criterion>
+    <criterion id="AC3">
+      <description>The sidebar contains two section labels: "SERVERS" (uppercase, 12px, gray) and "GROUPS" (uppercase, 12px, gray)</description>
+    </criterion>
+    <criterion id="AC4">
+      <description>Clicking "Back to Dashboard" returns to `/` with no visual changes to the dashboard</description>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>4.1 Split-View Layout</section>
+        <snippet>ConfigPage uses split-view with fixed 280px sidebar and flexible main panel. Sidebar: white background, gray border-right (#d4d4d4). Main panel: light gray background (#fafafa).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>5.1 ConfigLayout Component</section>
+        <snippet>Container component with flexbox layout. Header includes "Configuration" title (H1, 24px, semibold) and "Back to Dashboard" link (14px, blue-600, hover:underline).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Decision 5: Route Structure</section>
+        <snippet>React Router with BrowserRouter. Route path="/" (Dashboard) and path="/config" (ConfigPage). Users can type `/config` directly in browser URL bar per PRD FR1.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Component Architecture - Frontend Component Hierarchy</section>
+        <snippet>ConfigPage route component renders ConfigLayout which contains Sidebar (280px fixed) and MainPanel (flexible). Sidebar has ServerListItem[] and GroupListItem[] for future stories.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 1.2: Create `/config` Route with Split-View Layout</section>
+        <snippet>Build `/config` route with split-view layout: 280px fixed sidebar, flexible main panel, page header with title and navigation link. Desktop-only with minimum 1280px width.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Technical Specification - Epic 1</title>
+        <section>3.2 Services and Modules</section>
+        <snippet>React Router 6+ handles routing. ConfigPage component at /config route. Existing Dashboard component unchanged at / route. Clean separation ensures no impact to existing dashboard.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/App.tsx</path>
+        <kind>component</kind>
+        <symbol>App</symbol>
+        <lines>1-8</lines>
+        <reason>Current entry point - needs modification to add React Router with BrowserRouter wrapping Dashboard and new ConfigPage routes</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/Dashboard.tsx</path>
+        <kind>component</kind>
+        <symbol>Dashboard</symbol>
+        <lines>all</lines>
+        <reason>Existing dashboard component that will become the "/" route. Must remain unchanged per AC4 requirement.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/separator.tsx</path>
+        <kind>component</kind>
+        <symbol>Separator</symbol>
+        <lines>all</lines>
+        <reason>shadcn/ui Separator component available for visual dividers between SERVERS/GROUPS sections in sidebar</reason>
+      </artifact>
+      <artifact>
+        <path>src/lib/utils.ts</path>
+        <kind>utility</kind>
+        <symbol>cn</symbol>
+        <lines>all</lines>
+        <reason>Tailwind utility function for conditional class merging. Use for component styling in ConfigLayout, Sidebar, MainPanel.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="npm">
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="typescript" version="^5.2.2" />
+        <package name="vite" version="^4.5.3" />
+        <package name="tailwindcss" version="^3.4.3" />
+        <package name="@radix-ui/react-separator" version="^1.1.8" note="shadcn/ui Separator already installed" />
+        <package name="react-router-dom" version="TBD" note="MUST BE INSTALLED for this story - not currently in package.json" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use Tailwind CSS utility classes for all styling - no custom CSS files needed</constraint>
+    <constraint type="pattern">Use semantic color tokens from configured theme (border-border, bg-background, text-primary) instead of hardcoded hex values</constraint>
+    <constraint type="pattern">Import components using @/components path alias configured in tsconfig.json and vite.config.ts</constraint>
+    <constraint type="architecture">ConfigPage must be a route-level component in src/pages/ directory (new directory to create)</constraint>
+    <constraint type="architecture">ConfigLayout, Sidebar, MainPanel must be in src/components/config/ directory (new directory to create)</constraint>
+    <constraint type="architecture">Existing Dashboard component at "/" route must remain completely unchanged (brownfield safety)</constraint>
+    <constraint type="styling">Sidebar: fixed width 280px (flex-shrink-0), white background, gray border-right (1px solid border-border)</constraint>
+    <constraint type="styling">Main Panel: flexible width (flex-1), light gray background (bg-background which maps to #fafafa), min-height 100vh</constraint>
+    <constraint type="styling">Page Header: "Configuration" title (text-2xl font-semibold), "Back to Dashboard" link (text-sm text-primary hover:underline)</constraint>
+    <constraint type="styling">Section Labels: uppercase text, text-xs (12px), text-gray-600, font-semibold, proper spacing (mx-4 my-3)</constraint>
+    <constraint type="testing">Verify browser navigation works - typing /config in URL bar shows config page, clicking Back to Dashboard returns to /</constraint>
+    <constraint type="testing">Verify existing dashboard unchanged - no visual changes when navigating back from /config</constraint>
+    <constraint type="accessibility">Desktop-only design, minimum viewport width 1280px (no mobile responsive requirements for MVP)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>React Router Route Definition</name>
+      <kind>React Component Pattern</kind>
+      <signature>
+&lt;BrowserRouter&gt;
+  &lt;Routes&gt;
+    &lt;Route path="/" element={&lt;Dashboard /&gt;} /&gt;
+    &lt;Route path="/config" element={&lt;ConfigPage /&gt;} /&gt;
+  &lt;/Routes&gt;
+&lt;/BrowserRouter&gt;
+      </signature>
+      <path>src/App.tsx (to be modified)</path>
+    </interface>
+    <interface>
+      <name>ConfigLayout Component Interface</name>
+      <kind>React Component</kind>
+      <signature>export function ConfigLayout(): JSX.Element - Split-view container with Sidebar and MainPanel children</signature>
+      <path>src/components/config/ConfigLayout.tsx (to be created)</path>
+    </interface>
+    <interface>
+      <name>Sidebar Component Interface</name>
+      <kind>React Component</kind>
+      <signature>export function Sidebar(): JSX.Element - Fixed 280px sidebar with SERVERS and GROUPS section labels</signature>
+      <path>src/components/config/Sidebar.tsx (to be created)</path>
+    </interface>
+    <interface>
+      <name>MainPanel Component Interface</name>
+      <kind>React Component</kind>
+      <signature>export function MainPanel({ children }: { children?: React.ReactNode }): JSX.Element - Flexible main content area with gray background</signature>
+      <path>src/components/config/MainPanel.tsx (to be created)</path>
+    </interface>
+    <interface>
+      <name>Tailwind Theme Tokens</name>
+      <kind>CSS Variables</kind>
+      <signature>
+border-border: maps to #d4d4d4 (gray-300)
+bg-background: maps to #fafafa (gray-50)
+text-primary: maps to #2563eb (blue-600)
+text-gray-600: gray-600 color
+      </signature>
+      <path>src/App.css (configured in Story 1.1)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      TypeScript compilation with strict mode enabled. Component rendering verified via build success. Browser testing for route navigation - manual verification of URL changes and component rendering. No automated component tests required for Epic 1 foundation stories (defer to Epic 2).
+    </standards>
+    <locations>
+      No test files created for this story. Future integration tests will be added in Epic 2 when interactive functionality is implemented.
+    </locations>
+    <ideas>
+      <idea ac="AC1">
+        Manual Test: Open browser, navigate to http://localhost:5173/, then type /config in URL bar. Verify ConfigPage renders with split-view layout.
+      </idea>
+      <idea ac="AC2">
+        Manual Test: Measure sidebar width in DevTools (should be 280px), verify white background and gray border-right. Verify main panel has light gray background (#fafafa). Verify "Configuration" title is H1 with 24px font-size and semibold weight. Verify "Back to Dashboard" link is present and styled blue.
+      </idea>
+      <idea ac="AC3">
+        Manual Test: Inspect sidebar section labels. Verify "SERVERS" and "GROUPS" text is uppercase, 12px font-size, gray-600 color, semibold weight.
+      </idea>
+      <idea ac="AC4">
+        Manual Test: From /config page, click "Back to Dashboard" link. Verify browser URL changes to /, Dashboard component renders, and there are no visual differences compared to initial load.
+      </idea>
+      <idea general="Build Verification">
+        Run `npm run build` - verify TypeScript compilation succeeds with no errors. Run `npm run dev` - verify Vite dev server starts and no runtime errors in browser console.
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

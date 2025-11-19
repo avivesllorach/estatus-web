@@ -1,8 +1,17 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Dashboard } from './components/Dashboard';
+import { ConfigPage } from './pages/ConfigPage';
 import './App.css';
 
 function App() {
-  return <Dashboard />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/config" element={<ConfigPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

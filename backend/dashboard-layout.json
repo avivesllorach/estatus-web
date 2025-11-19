@@ -1,0 +1,16 @@
+{
+  "groups": [
+    {
+      "id": "group-1",
+      "name": "ARAGÓ",
+      "order": 1,
+      "serverIds": ["server-001", "server-002", "server-003", "server-004"]
+    },
+    {
+      "id": "group-2",
+      "name": "PROVENÇA",
+      "order": 2,
+      "serverIds": ["server-005", "server-006", "server-007"]
+    }
+  ]
+}
