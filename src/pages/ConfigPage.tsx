@@ -50,6 +50,10 @@ export function ConfigPage() {
     setSelectedServerId(null); // Clear server selection
   };
 
+  // Get selected server name
+  const selectedServer = servers.find(s => s.id === selectedServerId);
+  const selectedServerName = selectedServer?.name || null;
+
   return (
     <ConfigLayout
       sidebar={
@@ -68,6 +72,7 @@ export function ConfigPage() {
       <MainPanel
         selectedServerId={selectedServerId}
         selectedGroupId={selectedGroupId}
+        selectedServerName={selectedServerName}
       >
         <p className="text-gray-600">Select a server or group from the sidebar to configure.</p>
       </MainPanel>
