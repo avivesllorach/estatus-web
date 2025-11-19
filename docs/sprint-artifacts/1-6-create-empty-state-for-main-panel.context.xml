@@ -1,0 +1,275 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.6</storyId>
+    <title>Create Empty State for Main Panel</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-19</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-6-create-empty-state-for-main-panel.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to see helpful guidance when nothing is selected</iWant>
+    <soThat>I understand what to do next</soThat>
+    <tasks>
+      - Task 1: Create EmptyState component (AC: 1, 2, 3)
+      - Task 2: Integrate EmptyState into MainPanel (AC: All)
+      - Task 3: Update ConfigPage to handle empty state (AC: All)
+      - Task 4: Style and polish EmptyState (AC: 2, 3)
+      - Task 5: Test empty state behavior (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Given I am on the `/config` page, when no server or group is selected (initial load or after deletion), then the main panel displays an empty state with:
+       - Centered icon or illustration
+       - Message: "Select a server or group from the list to edit"
+       - Secondary message: "Or click '+ Add Server' to create a new monitored server"
+
+    2. And the empty state is vertically and horizontally centered in the main panel
+
+    3. And text is gray-600 color, 14px font size
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- PRD - Empty State Requirements -->
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>User Interface & Navigation</section>
+        <snippet>Configuration page should provide clear guidance when no selection is active, helping users understand available actions.</snippet>
+      </doc>
+
+      <!-- Epic Breakdown - Story 1.6 Details -->
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 1.6: Create Empty State for Main Panel</section>
+        <snippet>User wants to see helpful guidance when nothing is selected. Empty state should be vertically and horizontally centered with clear messaging about next actions. No elaborate illustrations needed for MVP - keep it simple.</snippet>
+      </doc>
+
+      <!-- UX Design - Empty State Patterns -->
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Empty State Patterns</section>
+        <snippet>Empty states should be context-aware, non-blocking, with subtle styling. Use flexbox centering, max-width constraint (~400-500px), gray-600 for primary text, gray-500 for secondary. Icon: 48px, gray-400. Message hierarchy: primary (what's missing) + secondary (suggested action).</snippet>
+      </doc>
+
+      <!-- Architecture - Component Strategy -->
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Component Architecture (section 4)</section>
+        <snippet>EmptyState is a leaf component under MainPanel, following single-responsibility principle. Pure presentational component with no side effects. Part of Epic 1 UI Foundation.</snippet>
+      </doc>
+
+      <!-- Tech Spec - Epic 1 Component Hierarchy -->
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Component Hierarchy and EmptyState Requirements</section>
+        <snippet>ConfigPage → ConfigLayout → MainPanel → EmptyState (when nothing selected). EmptyState requirements: centered vertically/horizontally, simple message-based design, no elaborate illustrations, provides user guidance on next action.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <!-- Existing MainPanel Component (to be modified) -->
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>1-13</lines>
+        <reason>Current MainPanel accepts children only. Need to add selectedServerId and selectedGroupId props to conditionally render EmptyState when both are null.</reason>
+      </artifact>
+
+      <!-- ConfigPage - Selection State Management -->
+      <artifact>
+        <path>src/pages/ConfigPage.tsx</path>
+        <kind>component</kind>
+        <symbol>ConfigPage</symbol>
+        <lines>13-14,43-51,68-70</lines>
+        <reason>ConfigPage manages selectedServerId and selectedGroupId state. Already initialized as null (line 13-14). Handlers implement mutual exclusivity (lines 43-51). Need to pass selection state to MainPanel (line 68).</reason>
+      </artifact>
+
+      <!-- ServerListItem - Pattern Reference -->
+      <artifact>
+        <path>src/components/config/ServerListItem.tsx</path>
+        <kind>component</kind>
+        <symbol>ServerListItem</symbol>
+        <lines>1-57</lines>
+        <reason>Reference pattern for component styling: uses cn() utility for conditional classes, forwardRef for keyboard navigation, gray-600/gray-400 color hierarchy, 14px (text-sm) font sizing.</reason>
+      </artifact>
+
+      <!-- shadcn/ui Button Component -->
+      <artifact>
+        <path>src/components/ui/button.tsx</path>
+        <kind>component</kind>
+        <symbol>Button</symbol>
+        <lines>all</lines>
+        <reason>shadcn/ui Button component already available, uses class-variance-authority for variants. Not directly used in EmptyState but reference for component structure.</reason>
+      </artifact>
+
+      <!-- Utility Function for Class Merging -->
+      <artifact>
+        <path>src/lib/utils.ts</path>
+        <kind>utility</kind>
+        <symbol>cn</symbol>
+        <lines>all</lines>
+        <reason>cn() utility function for merging Tailwind classes. Use in EmptyState component for conditional styling if needed.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <frontend>
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="lucide-react" version="^0.554.0" usage="Icon library - use FileQuestion, Inbox, or FolderSearch icon" />
+        <package name="clsx" version="^2.1.1" usage="Class name utility (via cn())" />
+        <package name="tailwind-merge" version="^3.4.0" usage="Tailwind class merging (via cn())" />
+        <package name="typescript" version="^5.2.2" />
+      </frontend>
+      <dev>
+        <package name="vite" version="^4.5.3" usage="Build tool" />
+        <package name="tailwindcss" version="^3.4.3" usage="Utility-first CSS" />
+      </dev>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Component must be pure presentational (no side effects, no state)
+    - Use flexbox for centering: flex items-center justify-center h-full
+    - Text colors: gray-600 (primary message), gray-500 (secondary message)
+    - Font size: 14px (text-sm in Tailwind)
+    - Icon: 48px (h-12 w-12), gray-400 color
+    - Max-width: ~400-500px to prevent overly wide text
+    - Gap between elements: 16px (gap-4)
+    - MainPanel must preserve h-full or flex-1 for proper centering
+    - No elaborate illustrations - keep it simple for MVP
+    - Default messages should be overridable via props (for future reuse)
+    - Follow existing component patterns: forwardRef not needed (no keyboard interaction), cn() for class merging optional (static classes only)
+  </constraints>
+
+  <interfaces>
+    <!-- EmptyState Component Interface (to be created) -->
+    <interface>
+      <name>EmptyStateProps</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+        interface EmptyStateProps {
+          message?: string;
+          secondaryMessage?: string;
+        }
+      </signature>
+      <path>src/components/config/EmptyState.tsx</path>
+    </interface>
+
+    <!-- Updated MainPanel Component Interface -->
+    <interface>
+      <name>MainPanelProps</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+        interface MainPanelProps {
+          selectedServerId: string | null;
+          selectedGroupId: string | null;
+          children?: React.ReactNode;
+        }
+      </signature>
+      <path>src/components/config/MainPanel.tsx</path>
+    </interface>
+
+    <!-- lucide-react Icon Import -->
+    <interface>
+      <name>FileQuestion Icon</name>
+      <kind>React component import</kind>
+      <signature>import { FileQuestion } from 'lucide-react'</signature>
+      <path>lucide-react package</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Epic 1 follows manual testing strategy per tech spec. No automated tests required for MVP. TypeScript compilation serves as type safety validation. Component rendering validated through successful build process.
+    </standards>
+
+    <locations>
+      - Manual testing: http://localhost:5173/config
+      - Build verification: npm run build (frontend root)
+    </locations>
+
+    <ideas>
+      <!-- AC 1: Empty state displays with correct content -->
+      <test ac="1">
+        <description>Navigate to /config on initial load, verify empty state displays</description>
+        <steps>
+          1. Start dev server: npm run dev
+          2. Navigate to http://localhost:5173/config
+          3. Verify FileQuestion icon visible (48px, gray color)
+          4. Verify primary message: "Select a server or group from the list to edit"
+          5. Verify secondary message: "Or click '+ Add Server' to create a new monitored server"
+        </steps>
+      </test>
+
+      <!-- AC 2: Vertical and horizontal centering -->
+      <test ac="2">
+        <description>Verify empty state remains centered at different viewport sizes</description>
+        <steps>
+          1. Resize window to 600px height
+          2. Verify empty state centered vertically and horizontally
+          3. Resize to 800px height
+          4. Verify centering maintained
+          5. Resize to 1200px height
+          6. Verify centering maintained
+        </steps>
+      </test>
+
+      <!-- AC 3: Text styling and colors -->
+      <test ac="3">
+        <description>Verify text colors and font sizes match spec</description>
+        <steps>
+          1. Inspect primary message text
+          2. Verify color: #4b5563 (gray-600)
+          3. Verify font-size: 14px (0.875rem)
+          4. Inspect secondary message text
+          5. Verify color: #6b7280 (gray-500)
+          6. Verify font-size: 14px
+        </steps>
+      </test>
+
+      <!-- Server selection hides empty state -->
+      <test ac="all">
+        <description>Verify empty state hides when server selected</description>
+        <steps>
+          1. Navigate to /config (empty state visible)
+          2. Click a server in sidebar
+          3. Verify empty state disappears
+          4. Main panel should show temporary message (forms in Epic 2)
+        </steps>
+      </test>
+
+      <!-- Group selection hides empty state -->
+      <test ac="all">
+        <description>Verify empty state hides when group selected</description>
+        <steps>
+          1. Navigate to /config (empty state visible)
+          2. Click a group in sidebar
+          3. Verify empty state disappears
+        </steps>
+      </test>
+
+      <!-- Build verification -->
+      <test ac="all">
+        <description>TypeScript compilation and build verification</description>
+        <steps>
+          1. Run: npm run build
+          2. Verify no TypeScript errors
+          3. Verify no ESLint warnings
+          4. Verify build succeeds
+        </steps>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

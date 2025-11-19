@@ -65,7 +65,10 @@ export function ConfigPage() {
         />
       }
     >
-      <MainPanel>
+      <MainPanel
+        selectedServerId={selectedServerId}
+        selectedGroupId={selectedGroupId}
+      >
         <p className="text-gray-600">Select a server or group from the sidebar to configure.</p>
       </MainPanel>
     </ConfigLayout>
