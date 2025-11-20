@@ -80,6 +80,19 @@ export function ConfigPage() {
     setSelectedServerId(null); // Clear server selection
   };
 
+  const handleAddServerClick = () => {
+    // Clear selections and trigger "add mode" in MainPanel
+    setSelectedServerId('__ADD_MODE__'); // Special flag to indicate add mode
+    setSelectedGroupId(null);
+    setSelectedServerConfig(null);
+  };
+
+  const handleAddGroupClick = () => {
+    // Future implementation for Epic 3
+    setSelectedGroupId('__ADD_MODE__');
+    setSelectedServerId(null);
+  };
+
   // Get selected server name
   const selectedServer = servers.find(s => s.id === selectedServerId);
   const selectedServerName = selectedServer?.name || null;
@@ -96,6 +109,8 @@ export function ConfigPage() {
           selectedGroupId={selectedGroupId}
           onSelectServer={handleSelectServer}
           onSelectGroup={handleSelectGroup}
+          onAddServerClick={handleAddServerClick}
+          onAddGroupClick={handleAddGroupClick}
         />
       }
     >

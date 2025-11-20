@@ -16,6 +16,8 @@ interface SidebarProps {
   selectedGroupId: string | null;
   onSelectServer: (id: string) => void;
   onSelectGroup: (id: string) => void;
+  onAddServerClick?: () => void;
+  onAddGroupClick?: () => void;
 }
 
 export function Sidebar({
@@ -26,7 +28,9 @@ export function Sidebar({
   selectedServerId,
   selectedGroupId,
   onSelectServer,
-  onSelectGroup
+  onSelectGroup,
+  onAddServerClick,
+  onAddGroupClick
 }: SidebarProps) {
   const [focusedServerIndex, setFocusedServerIndex] = useState<number>(0);
   const [focusedGroupIndex, setFocusedGroupIndex] = useState<number>(0);
@@ -77,7 +81,7 @@ export function Sidebar({
           variant="secondary"
           size="sm"
           className="w-full mb-3"
-          onClick={() => {}}
+          onClick={onAddServerClick}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Server
@@ -128,7 +132,7 @@ export function Sidebar({
           variant="secondary"
           size="sm"
           className="w-full mb-3"
-          onClick={() => {}}
+          onClick={onAddGroupClick}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Group

@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 
 interface PanelHeaderProps {
-  title: string;               // "Edit Server: ARAGÓ-01"
-  onDelete: () => void;        // Delete button handler
+  title: string;               // "Edit Server: ARAGÓ-01" or "Add New Server"
+  onDelete?: () => void;       // Delete button handler (optional - not shown in add mode)
   onCancel: () => void;        // Cancel button handler
   onSave: () => void;          // Save button handler
   isDirty?: boolean;           // Optional: show unsaved indicator (Epic 2.9)
@@ -27,9 +27,11 @@ export function PanelHeader({
           {isDirty && <span className="ml-2 text-sm text-gray-500">(unsaved)</span>}
         </h2>
         <div className="flex gap-2">
-          <Button variant="destructive" size="sm" onClick={onDelete}>
-            Delete
-          </Button>
+          {onDelete && (
+            <Button variant="destructive" size="sm" onClick={onDelete}>
+              Delete
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={onCancel}>
             Cancel
           </Button>

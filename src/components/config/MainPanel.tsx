@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useMemo } from 'react';
+import { ReactNode, useState, useEffect, useMemo, useRef } from 'react';
 import { EmptyState } from './EmptyState';
 import { PanelHeader } from './PanelHeader';
 import { BasicServerInfoSection } from './forms/server/BasicServerInfoSection';
@@ -8,6 +8,28 @@ import { CollapsibleConfigSection } from './forms/shared/CollapsibleConfigSectio
 import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
 import { configApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+
+// Helper function to create empty server config template
+function createEmptyServerConfig(): Partial<ServerConfig> {
+  return {
+    id: '',
+    name: '',
+    ip: '',
+    dns: '',
+    snmp: {
+      enabled: false,
+      storageIndexes: [],
+      disks: []
+    },
+    netapp: {
+      enabled: false,
+      apiType: 'rest',
+      username: '',
+      password: '',
+      luns: []
+    }
+  };
+}
 
 interface MainPanelProps {
   selectedServerId: string | null;
@@ -25,7 +47,11 @@ export function MainPanel({
 }: MainPanelProps) {
   const { toast } = useToast();
 
-  // Form state for server editing
+  // Determine mode based on selectedServerId
+  const isAddMode = selectedServerId === '__ADD_MODE__';
+  const isEditMode = selectedServerId !== null && selectedServerId !== '__ADD_MODE__';
+
+  // Form state for server editing/adding
   const [formData, setFormData] = useState<Partial<ServerConfig>>({
     id: selectedServer?.id || '',
     name: selectedServer?.name || '',
@@ -51,9 +77,19 @@ export function MainPanel({
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
 
-  // Update form data and initialData when selected server changes
+  // Ref for auto-focus on Server ID field in add mode
+  const serverIdInputRef = useRef<HTMLInputElement>(null);
+
+  // Update form data and initialData when mode or selected server changes
   useEffect(() => {
-    if (selectedServer) {
+    if (isAddMode) {
+      // Add mode: clear form with empty template
+      const emptyData = createEmptyServerConfig();
+      setFormData(emptyData);
+      setInitialData(emptyData);
+      setValidationErrors({});
+    } else if (selectedServer) {
+      // Edit mode: load server data
       const serverData = {
         id: selectedServer.id,
         name: selectedServer.name,
@@ -65,7 +101,14 @@ export function MainPanel({
       setFormData(serverData);
       setInitialData(serverData);
     }
-  }, [selectedServer?.id]);
+  }, [isAddMode, selectedServer?.id]);
+
+  // Auto-focus Server ID field when entering add mode
+  useEffect(() => {
+    if (isAddMode && serverIdInputRef.current) {
+      serverIdInputRef.current.focus();
+    }
+  }, [isAddMode]);
 
   // Compute dirty state (has unsaved changes)
   const isDirty = useMemo(() => {
@@ -89,7 +132,8 @@ export function MainPanel({
     setFormData(prev => ({ ...prev, netapp: netappConfig }));
   };
 
-  const handleSave = async () => {
+  // Save handler for editing existing server
+  const handleSaveExisting = async () => {
     // Don't save if there are validation errors
     if (hasErrors) {
       toast({
@@ -140,6 +184,70 @@ export function MainPanel({
     }
   };
 
+  // Save handler for adding new server
+  const handleSaveNewServer = async () => {
+    // Don't save if there are validation errors
+    if (hasErrors) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation errors',
+        description: 'Please fix all validation errors before saving',
+        duration: Infinity,
+      });
+      return;
+    }
+
+    // Don't save if required fields are empty
+    if (!formData.name || !formData.ip || !formData.dns) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing required fields',
+        description: 'Please fill in all required fields (Server Name, IP Address, DNS Address)',
+        duration: Infinity,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call API to create server
+      const newServer = await configApi.createServer(formData as any);
+
+      // Show success toast
+      toast({
+        title: 'Server added successfully',
+        description: `${newServer.name} has been added to monitoring`,
+        duration: 3000, // Auto-dismiss after 3 seconds
+      });
+
+      // Clear form for another add (AC #12 - implementation choice A)
+      const emptyData = createEmptyServerConfig();
+      setFormData(emptyData);
+      setInitialData(emptyData);
+      setValidationErrors({});
+
+      // Re-focus on Server ID field for quick consecutive adds
+      setTimeout(() => {
+        if (serverIdInputRef.current) {
+          serverIdInputRef.current.focus();
+        }
+      }, 100);
+
+      // TODO: Update sidebar list with new server (requires parent state update)
+    } catch (error) {
+      // Show error toast
+      toast({
+        variant: 'destructive',
+        title: 'Failed to add server',
+        description: error instanceof Error ? error.message : 'Failed to create server',
+        duration: Infinity,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCancel = () => {
     // Revert to initial data
     setFormData(initialData);
@@ -153,15 +261,18 @@ export function MainPanel({
   // Check if any validation errors exist
   const hasErrors = Object.values(validationErrors).some(error => error !== null);
 
-  // Server edit form view
-  if (selectedServerId && selectedServerName) {
+  // Server add/edit form view
+  if (isAddMode || (isEditMode && selectedServerName)) {
+    const panelTitle = isAddMode ? 'Add New Server' : `Edit Server: ${selectedServerName}`;
+    const saveHandler = isAddMode ? handleSaveNewServer : handleSaveExisting;
+
     return (
       <div className="flex-1 bg-gray-50 flex flex-col">
         <PanelHeader
-          title={`Edit Server: ${selectedServerName}`}
-          onDelete={() => {}}
+          title={panelTitle}
+          onDelete={isEditMode ? () => {} : undefined}
           onCancel={handleCancel}
-          onSave={handleSave}
+          onSave={saveHandler}
           hasErrors={hasErrors}
           isLoading={isLoading}
           isDirty={isDirty}
@@ -174,7 +285,8 @@ export function MainPanel({
             dns={formData.dns || ''}
             onFieldChange={handleFieldChange}
             onValidationChange={handleValidationChange}
-            isEditMode={true}
+            isEditMode={isEditMode}
+            serverIdInputRef={serverIdInputRef}
           />
 
           {/* SNMP Configuration Section */}

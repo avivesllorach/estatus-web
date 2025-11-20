@@ -252,6 +252,36 @@ export interface ServerConfig {
 
 export const configApi = {
   /**
+   * Create new server configuration
+   */
+  async createServer(data: ServerConfig): Promise<ServerConfig> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/servers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result: ApiResponse<ServerConfig> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create server');
+      }
+
+      if (!result.data) {
+        throw new Error('Server creation succeeded but no data returned');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error creating server:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Update existing server configuration
    */
   async updateServer(id: string, data: ServerConfig): Promise<ServerConfig> {

@@ -109,6 +109,109 @@ router.get('/groups', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/config/servers
+ * Create new server configuration
+ *
+ * Request body: ServerConfig (without id - will be generated)
+ * Response: ApiResponse<ServerConfig>
+ *
+ * Status codes:
+ * - 200: Success
+ * - 400: Validation error
+ * - 409: Duplicate server ID
+ * - 500: Server error
+ */
+router.post('/servers', async (req: Request, res: Response) => {
+  const serverData = req.body as ServerConfig;
+
+  try {
+    // Validate request data
+    const validationErrors = validateServerConfig(serverData);
+    if (validationErrors) {
+      console.warn('[Config API] Validation failed for server creation', {
+        errors: validationErrors,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<any> = {
+        success: false,
+        error: 'Validation failed',
+        data: validationErrors,
+      };
+      return res.status(400).json(response);
+    }
+
+    // Read current servers.json
+    const fileContent = await fs.readFile(CONFIG_PATHS.servers, 'utf-8');
+    const servers: ServerConfig[] = JSON.parse(fileContent);
+
+    // Check for duplicate Server ID (if user provided an ID)
+    if (serverData.id) {
+      const isDuplicate = servers.some(s => s.id === serverData.id);
+      if (isDuplicate) {
+        console.warn('[Config API] Duplicate server ID detected', {
+          serverId: serverData.id,
+          timestamp: new Date().toISOString(),
+        });
+
+        const response: ApiResponse<any> = {
+          success: false,
+          error: 'Server ID already exists',
+          data: { id: 'This server ID is already in use' },
+        };
+        return res.status(409).json(response);
+      }
+    } else {
+      // Generate unique server ID if not provided
+      // Format: server-### (zero-padded, e.g., server-001, server-025)
+      const existingIds = servers.map(s => s.id);
+      let newId = '';
+      let counter = 1;
+
+      while (true) {
+        newId = `server-${String(counter).padStart(3, '0')}`;
+        if (!existingIds.includes(newId)) {
+          break;
+        }
+        counter++;
+      }
+
+      serverData.id = newId;
+    }
+
+    // Append new server to array
+    servers.push(serverData);
+
+    // Write updated array atomically
+    await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    console.info('[Config API] Server created successfully', {
+      serverId: serverData.id,
+      name: serverData.name,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return success with new server (including generated ID)
+    const response: ApiResponse<ServerConfig> = {
+      success: true,
+      data: serverData,
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('[Config API] Server creation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to create server configuration',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
  * PUT /api/config/servers/:id
  * Update existing server configuration
  *

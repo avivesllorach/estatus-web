@@ -17,6 +17,7 @@ interface BasicServerInfoSectionProps {
   onFieldChange: (field: string, value: string) => void;
   onValidationChange?: (errors: Record<string, string | null>) => void;
   isEditMode?: boolean;
+  serverIdInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export function BasicServerInfoSection({
@@ -26,7 +27,8 @@ export function BasicServerInfoSection({
   dns,
   onFieldChange,
   onValidationChange,
-  isEditMode = true
+  isEditMode = true,
+  serverIdInputRef
 }: BasicServerInfoSectionProps) {
   // Validation error state
   const [errors, setErrors] = useState<Record<string, string | null>>({
@@ -69,10 +71,12 @@ export function BasicServerInfoSection({
         >
           <Input
             id="server-id"
+            ref={serverIdInputRef}
             value={serverId}
             onChange={(e) => onFieldChange('id', e.target.value)}
             disabled={isEditMode}
             className={isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}
+            placeholder="e.g., aragó-01"
           />
         </FormGroup>
 
