@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { EmptyState } from './EmptyState';
 import { PanelHeader } from './PanelHeader';
 import { BasicServerInfoSection } from './forms/server/BasicServerInfoSection';
@@ -6,6 +6,8 @@ import { SNMPConfigSection } from './forms/server/SNMPConfigSection';
 import { NetAppConfigSection } from './forms/server/NetAppConfigSection';
 import { CollapsibleConfigSection } from './forms/shared/CollapsibleConfigSection';
 import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
+import { configApi } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface MainPanelProps {
   selectedServerId: string | null;
@@ -21,6 +23,7 @@ export function MainPanel({
   selectedServerName,
   selectedServer
 }: MainPanelProps) {
+  const { toast } = useToast();
 
   // Form state for server editing
   const [formData, setFormData] = useState<Partial<ServerConfig>>({
@@ -32,20 +35,43 @@ export function MainPanel({
     netapp: selectedServer?.netapp
   });
 
+  // Initial data for dirty state tracking
+  const [initialData, setInitialData] = useState<Partial<ServerConfig>>({
+    id: selectedServer?.id || '',
+    name: selectedServer?.name || '',
+    ip: selectedServer?.ip || '',
+    dns: selectedServer?.dns || '',
+    snmp: selectedServer?.snmp,
+    netapp: selectedServer?.netapp
+  });
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
 
-  // Update form data when server changes
-  if (selectedServer && formData.id !== selectedServer.id) {
-    setFormData({
-      id: selectedServer.id,
-      name: selectedServer.name,
-      ip: selectedServer.ip,
-      dns: selectedServer.dns,
-      snmp: selectedServer.snmp,
-      netapp: selectedServer.netapp
-    });
-  }
+  // Update form data and initialData when selected server changes
+  useEffect(() => {
+    if (selectedServer) {
+      const serverData = {
+        id: selectedServer.id,
+        name: selectedServer.name,
+        ip: selectedServer.ip,
+        dns: selectedServer.dns,
+        snmp: selectedServer.snmp,
+        netapp: selectedServer.netapp
+      };
+      setFormData(serverData);
+      setInitialData(serverData);
+    }
+  }, [selectedServer?.id]);
+
+  // Compute dirty state (has unsaved changes)
+  const isDirty = useMemo(() => {
+    if (!initialData || !formData) return false;
+    return JSON.stringify(initialData) !== JSON.stringify(formData);
+  }, [initialData, formData]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -63,6 +89,67 @@ export function MainPanel({
     setFormData(prev => ({ ...prev, netapp: netappConfig }));
   };
 
+  const handleSave = async () => {
+    // Don't save if there are validation errors
+    if (hasErrors) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation errors',
+        description: 'Please fix all validation errors before saving',
+        duration: Infinity, // Persist until user dismisses
+      });
+      return;
+    }
+
+    // Don't save if no server selected
+    if (!selectedServerId || !formData.id) {
+      toast({
+        variant: 'destructive',
+        title: 'No server selected',
+        description: 'Please select a server to edit',
+        duration: Infinity, // Persist until user dismisses
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call API to save server
+      await configApi.updateServer(selectedServerId, formData as any);
+
+      // Update initialData to mark form as clean
+      setInitialData(formData);
+
+      // Show success toast
+      toast({
+        title: 'Server saved',
+        description: `${formData.name} configuration updated successfully`,
+        duration: 3000, // Auto-dismiss after 3 seconds (AC #6)
+      });
+    } catch (error) {
+      // Show error toast
+      toast({
+        variant: 'destructive',
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Failed to save server configuration',
+        duration: Infinity, // Persist until manually dismissed (AC #10)
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Revert to initial data
+    setFormData(initialData);
+
+    toast({
+      title: 'Changes discarded',
+      description: 'Form reset to last saved state',
+    });
+  };
+
   // Check if any validation errors exist
   const hasErrors = Object.values(validationErrors).some(error => error !== null);
 
@@ -73,9 +160,11 @@ export function MainPanel({
         <PanelHeader
           title={`Edit Server: ${selectedServerName}`}
           onDelete={() => {}}
-          onCancel={() => {}}
-          onSave={() => {}}
+          onCancel={handleCancel}
+          onSave={handleSave}
           hasErrors={hasErrors}
+          isLoading={isLoading}
+          isDirty={isDirty}
         />
         <div className="flex-1 overflow-y-auto p-6">
           <BasicServerInfoSection

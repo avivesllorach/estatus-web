@@ -1,0 +1,371 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.6</storyId>
+    <title>Implement Save Server Functionality with Backend API</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-6-implement-save-server-functionality-with-backend-api.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to save my server configuration changes</iWant>
+    <soThat>they persist to `servers.json` and become active in monitoring</soThat>
+    <tasks>
+      - Task 1: Create backend API endpoint PUT /api/config/servers/:id (AC: 2, 3, 4)
+      - Task 2: Implement atomic file write utility (AC: 3)
+      - Task 3: Implement validation utility (AC: 3)
+      - Task 4: Wire backend route to Express server (AC: 2)
+      - Task 5: Create frontend API service for save operation (AC: 2, 9)
+      - Task 6: Implement Save button handler in MainPanel (AC: 1, 5, 7, 8)
+      - Task 7: Add toast notifications with shadcn/ui Toast (AC: 5, 6, 9, 10)
+      - Task 8: Add loading state to Save button (AC: 1)
+      - Task 9: Implement dirty state tracking for unsaved changes indicator (AC: 7)
+      - Task 10: Test save functionality end-to-end (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Given I have edited a server and the form is valid, When I click "Save Server" button, Then the button shows loading state (spinner, disabled)
+    2. And a `PUT /api/config/servers/:id` request is sent with updated server data
+    3. And the backend validates the data and updates `servers.json` atomically
+    4. And the backend returns success response with updated server object
+    5. And I see a success toast notification: "✓ Server configuration saved successfully"
+    6. And the toast has green background (#dcfce7), auto-dismisses after 3 seconds
+    7. And the form is no longer marked as "dirty" (unsaved changes indicator clears)
+    8. And the server appears updated in the sidebar list
+    9. And if save fails, I see error toast: "✗ Failed to save server configuration"
+    10. And error toast stays visible until I dismiss it
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Architectural Decision #4: Atomic File Writes</section>
+        <snippet>Configuration files (servers.json, dashboard-layout.json) must be written atomically using temp file + rename pattern. Write to temp file, verify success, then rename to target (atomic on POSIX). Prevents partial writes and corruption on process crash.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Architectural Decision #6: REST API Endpoint Design</section>
+        <snippet>All API endpoints return standardized ApiResponse&lt;T&gt; format with success boolean, data payload, and optional error/validationErrors. Write operations under /api/config namespace, read operations under /api/servers.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Architectural Decision #8: Defense in Depth Validation</section>
+        <snippet>Client-side validation provides immediate UX feedback. Backend validation mirrors all frontend rules for security (never trust client). Prevents malicious clients from bypassing validation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic Technical Specification: Server Management</title>
+        <section>API Request/Response Contracts</section>
+        <snippet>PUT /api/config/servers/:id updates existing server. Request body: ServerConfig. Response: ApiResponse&lt;ServerConfig&gt;. Status codes: 200 (success), 400 (validation error), 404 (not found), 500 (server error). Side effects: updates servers.json, triggers config reload, broadcasts serverUpdated SSE event.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic Technical Specification: Server Management</title>
+        <section>Validation Rules</section>
+        <snippet>Required fields: id (unique, format "server-###"), name (1-50 chars), ip (valid IPv4), dns (1-100 chars). Numeric ranges: consecutiveSuccesses/Failures (1-10). Frontend + Backend validation for all fields.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Feedback Patterns - Toast Notifications</section>
+        <snippet>Success toasts: green background (#dcfce7), auto-dismiss after 3 seconds. Error toasts: red background (destructive variant), persist until manually dismissed. Use checkmark icon (✓) for success, X icon (✗) for errors.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>1-127</lines>
+        <reason>Main panel component managing formData state (lines 26-33). Already has handleSave placeholder at line 77. This is where save handler will be implemented with API call, toast notifications, and dirty state management.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>state</kind>
+        <symbol>formData</symbol>
+        <lines>26-33</lines>
+        <reason>Complete server configuration state including id, name, ip, dns, snmp, netapp. This exact state object will be sent to PUT /api/config/servers/:id endpoint.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>1-48</lines>
+        <reason>Header component with Save button (line 34-42). Has hasErrors prop for disabling save when validation fails. Will need isLoading prop and spinner icon for Task 8.</reason>
+      </artifact>
+      <artifact>
+        <path>src/services/api.ts</path>
+        <kind>service</kind>
+        <symbol>ApiService</symbol>
+        <lines>1-100</lines>
+        <reason>Existing API service with fetchServers and SSE connection. Task 5 will add configApi.updateServer method here using same ApiResponse&lt;T&gt; pattern (lines 25-29).</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/server.ts</path>
+        <kind>server</kind>
+        <symbol>ServerMonitoringApp</symbol>
+        <lines>1-100</lines>
+        <reason>Express server setup with CORS (lines 24-30), body parsing (lines 33-34), and route mounting (lines 66-82). Config routes already mounted at line 81. Task 4 ensures CORS allows PUT/DELETE methods.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>ServerConfig</symbol>
+        <lines>25-32</lines>
+        <reason>Canonical ServerConfig interface used by both frontend and backend. This is the exact contract for PUT /api/config/servers/:id request/response body.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>ApiResponse</symbol>
+        <lines>90-94</lines>
+        <reason>Standardized API response wrapper. All backend endpoints return this format: success boolean, optional data payload, optional error message.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="react-router-dom" version="^7.9.6" />
+        <package name="@radix-ui/react-toast" version="^1.2.15" note="shadcn/ui toast component" />
+        <package name="lucide-react" version="^0.554.0" note="Loader2 spinner icon for loading state" />
+        <package name="tailwindcss-animate" version="^1.0.7" note="spinner animation" />
+      </frontend>
+      <backend>
+        <package name="express" version="^4.18.2" note="REST API framework" />
+        <package name="cors" version="^2.8.5" note="CORS middleware, must allow PUT/DELETE" />
+        <package name="@types/express" version="^4.17.21" />
+        <package name="@types/node" version="^20.10.5" note="fs/promises for atomic writes" />
+        <package name="typescript" version="^5.3.3" />
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">
+      Atomic File Writes (AD#4): Must use temp file + rename pattern when writing servers.json. Never write directly to target file. Steps: (1) write to servers.json.tmp with JSON.stringify(data, null, 2), (2) verify write succeeded, (3) fs.rename to servers.json (atomic on POSIX). On error, clean up temp file.
+    </constraint>
+    <constraint type="architecture">
+      ApiResponse Format (AD#6): All backend endpoints must return { success: true, data: T } on success or { success: false, error: string, validationErrors?: Record&lt;string, string&gt; } on failure. Frontend must check response.success before accessing data.
+    </constraint>
+    <constraint type="architecture">
+      Defense in Depth Validation (AD#8): Backend must re-validate all data received from frontend. Never trust client-side validation alone. IP regex: /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/. Name length: 1-50 chars. consecutiveSuccesses/Failures: 1-10.
+    </constraint>
+    <constraint type="data-model">
+      Preserve Existing Schema: ServerConfig interface (backend/src/types/server.ts:25-32) is the single source of truth. Frontend formData must map to this exact shape before sending to API. Field names: dnsAddress (backend) vs dns (frontend) - ensure mapping.
+    </constraint>
+    <constraint type="api">
+      CORS Configuration: Backend CORS middleware (server.ts:24-30) currently allows GET, POST, OPTIONS. Must add PUT and DELETE to methods array for config endpoints to work.
+    </constraint>
+    <constraint type="ui">
+      Loading State UX: Save button must show spinner (Loader2 icon from lucide-react) and be disabled during save operation. Button text changes to "Saving..." while loading. Prevents double-submit.
+    </constraint>
+    <constraint type="ui">
+      Toast Behavior: Success toast auto-dismisses after exactly 3000ms (AC#6). Error toast duration: Infinity (must be manually dismissed, AC#10). Success toast className: "bg-green-50 border-green-200" for green background.
+    </constraint>
+    <constraint type="state">
+      Dirty State Tracking: Use JSON.stringify deep comparison between initialData and formData to detect changes (AC#7). On successful save, update initialData to match formData to clear dirty state. isDirty should be computed via useMemo for performance.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>PUT /api/config/servers/:id</name>
+      <kind>REST endpoint</kind>
+      <signature>
+PUT /api/config/servers/:id
+Headers: Content-Type: application/json
+Body: ServerConfig {
+  id: string,
+  name: string,
+  ip: string,
+  dnsAddress: string,
+  snmp?: SnmpConfig,
+  netapp?: NetAppConfig
+}
+Response 200: {
+  success: true,
+  data: ServerConfig
+}
+Response 400: {
+  success: false,
+  error: "Validation failed",
+  validationErrors: { ip: "Invalid IPv4 format" }
+}
+Response 404: {
+  success: false,
+  error: "Server not found"
+}
+Response 500: {
+  success: false,
+  error: "Failed to save configuration"
+}
+      </signature>
+      <path>backend/src/routes/config.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>writeConfigAtomic</name>
+      <kind>utility function</kind>
+      <signature>
+async function writeConfigAtomic(filePath: string, data: any): Promise&lt;void&gt;
+- Writes JSON data to temp file (filePath + '.tmp')
+- Uses JSON.stringify(data, null, 2) for formatting
+- Renames temp file to target file (atomic operation)
+- Throws error if write or rename fails
+- Cleans up temp file on error
+      </signature>
+      <path>backend/src/utils/fileUtils.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>validateServerConfig</name>
+      <kind>utility function</kind>
+      <signature>
+function validateServerConfig(config: any): { [key: string]: string } | null
+- Returns null if valid
+- Returns object with field error messages if invalid
+- Validation rules:
+  - id: required, non-empty string
+  - name: required, 1-50 chars
+  - ip: required, valid IPv4 (regex: /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)
+  - dnsAddress: required, non-empty string
+  - consecutiveSuccesses: number, 1-10 (if present)
+  - consecutiveFailures: number, 1-10 (if present)
+      </signature>
+      <path>backend/src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>configApi.updateServer</name>
+      <kind>frontend API service method</kind>
+      <signature>
+async function updateServer(id: string, data: ServerConfig): Promise&lt;ServerConfig&gt;
+- Makes PUT request to /api/config/servers/${id}
+- Sets Content-Type: application/json header
+- Sends data as JSON body
+- Parses ApiResponse&lt;ServerConfig&gt; from response
+- Throws error if response.success === false
+- Returns response.data (ServerConfig) on success
+      </signature>
+      <path>src/services/api.ts (to be added to existing ApiService)</path>
+    </interface>
+    <interface>
+      <name>useToast</name>
+      <kind>React hook</kind>
+      <signature>
+const { toast } = useToast()
+
+toast({
+  title: string,           // Notification message
+  variant?: "default" | "destructive",
+  duration?: number,       // Milliseconds (Infinity for persist)
+  className?: string       // Custom styling
+})
+      </signature>
+      <path>@/components/ui/use-toast (shadcn/ui)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      This project follows manual testing approach with comprehensive test plans documented in story files. No automated unit/integration tests currently exist. Build verification (npm run build) provides TypeScript compile-time safety. Future consideration: Add Vitest for unit tests, React Testing Library for component tests, and Playwright for E2E tests.
+    </standards>
+    <locations>
+      No test directories currently exist. Recommended structure if tests added:
+      - Frontend: src/__tests__/ or src/components/**/*.test.tsx
+      - Backend: backend/src/__tests__/ or backend/src/**/*.test.ts
+    </locations>
+    <ideas>
+      <test id="AC1-AC4">
+        <description>Backend API Integration Test</description>
+        <approach>
+          1. Start backend server with test servers.json
+          2. Make PUT /api/config/servers/server-001 with updated name/IP
+          3. Verify response.success === true and response.data contains updated values
+          4. Read servers.json file directly and verify changes persisted
+          5. Verify temp file (servers.json.tmp) was cleaned up
+          6. Test error cases: invalid IP (400), non-existent ID (404)
+        </approach>
+        <acceptance-criteria>AC2, AC3, AC4</acceptance-criteria>
+      </test>
+      <test id="AC1-AC5-AC6">
+        <description>Frontend Save Flow with Toast Notifications</description>
+        <approach>
+          1. Mount MainPanel component with mock server data
+          2. Modify server name field
+          3. Click "Save Server" button
+          4. Verify button shows loading state (spinner, disabled)
+          5. Mock successful API response
+          6. Verify success toast appears with green background
+          7. Start timer to verify toast auto-dismisses after 3000ms
+          8. Verify formData.isDirty === false after save
+        </approach>
+        <acceptance-criteria>AC1, AC5, AC6, AC7</acceptance-criteria>
+      </test>
+      <test id="AC9-AC10">
+        <description>Error Handling and Persistent Error Toast</description>
+        <approach>
+          1. Mount MainPanel component
+          2. Modify server data
+          3. Click "Save Server"
+          4. Mock API failure (500 error)
+          5. Verify error toast appears with destructive variant
+          6. Verify toast does NOT auto-dismiss (duration: Infinity)
+          7. Verify form remains editable (no state cleared)
+          8. Manually dismiss toast
+          9. Verify toast disappears
+        </approach>
+        <acceptance-criteria>AC9, AC10</acceptance-criteria>
+      </test>
+      <test id="validation">
+        <description>Backend Validation Defense-in-Depth</description>
+        <approach>
+          1. Send PUT request with invalid IP: "999.999.999.999"
+          2. Verify 400 response with validationErrors.ip
+          3. Send PUT with missing required field (name: "")
+          4. Verify 400 response with validationErrors.name
+          5. Send PUT with invalid consecutiveSuccesses: 15 (out of range 1-10)
+          6. Verify 400 response with validation error
+          7. Confirm validation errors match frontend validation rules
+        </approach>
+        <acceptance-criteria>AC3 (backend validation)</acceptance-criteria>
+      </test>
+      <test id="atomic-writes">
+        <description>Atomic Write Integrity Under Failure</description>
+        <approach>
+          1. Create test servers.json with known data
+          2. Mock fs.writeFile to succeed but fs.rename to fail
+          3. Call writeConfigAtomic
+          4. Verify temp file (.tmp) was created
+          5. Verify original servers.json unchanged
+          6. Verify temp file cleaned up after error
+          7. Mock process crash during write (harder - may need separate test)
+          8. Verify original file intact (atomic guarantee)
+        </approach>
+        <acceptance-criteria>AC3 (atomic writes)</acceptance-criteria>
+      </test>
+      <test id="dirty-state">
+        <description>Dirty State Tracking Accuracy</description>
+        <approach>
+          1. Load MainPanel with server data
+          2. Verify isDirty === false initially
+          3. Modify single field (e.g., name)
+          4. Verify isDirty === true
+          5. Revert field to original value
+          6. Verify isDirty === false (deep comparison works)
+          7. Modify nested field (snmpConfig.community)
+          8. Verify isDirty === true
+          9. Save successfully
+          10. Verify isDirty === false after save
+        </approach>
+        <acceptance-criteria>AC7</acceptance-criteria>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

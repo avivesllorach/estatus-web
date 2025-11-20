@@ -224,3 +224,60 @@ export class ApiService {
 
 // Export singleton instance
 export const apiService = new ApiService();
+
+/**
+ * Config API for server configuration management
+ */
+export interface ServerConfig {
+  id: string;
+  name: string;
+  ip: string;
+  dns: string;
+  consecutiveSuccesses?: number;
+  consecutiveFailures?: number;
+  snmpConfig?: {
+    enabled: boolean;
+    community: string;
+    storageIndexes: number[];
+    diskNames: string[];
+  };
+  netappConfig?: {
+    enabled: boolean;
+    apiType: 'rest' | 'zapi';
+    username: string;
+    password: string;
+    luns: Array<{ name: string; path: string }>;
+  };
+}
+
+export const configApi = {
+  /**
+   * Update existing server configuration
+   */
+  async updateServer(id: string, data: ServerConfig): Promise<ServerConfig> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/servers/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result: ApiResponse<ServerConfig> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update server');
+      }
+
+      if (!result.data) {
+        throw new Error('Server update succeeded but no data returned');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error(`Error updating server ${id}:`, error);
+      throw error;
+    }
+  },
+};

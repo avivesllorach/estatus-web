@@ -24,7 +24,7 @@ class ServerMonitoringApp {
     // CORS configuration
     this.app.use(cors({
       origin: CORS_ORIGIN,
-      methods: ['GET', 'POST', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
       credentials: true
     }));
