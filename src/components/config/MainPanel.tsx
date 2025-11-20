@@ -3,8 +3,9 @@ import { EmptyState } from './EmptyState';
 import { PanelHeader } from './PanelHeader';
 import { BasicServerInfoSection } from './forms/server/BasicServerInfoSection';
 import { SNMPConfigSection } from './forms/server/SNMPConfigSection';
+import { NetAppConfigSection } from './forms/server/NetAppConfigSection';
 import { CollapsibleConfigSection } from './forms/shared/CollapsibleConfigSection';
-import { ServerConfig, SnmpConfig } from '@/types/server';
+import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
 
 interface MainPanelProps {
   selectedServerId: string | null;
@@ -27,7 +28,8 @@ export function MainPanel({
     name: selectedServer?.name || '',
     ip: selectedServer?.ip || '',
     dns: selectedServer?.dns || '',
-    snmp: selectedServer?.snmp
+    snmp: selectedServer?.snmp,
+    netapp: selectedServer?.netapp
   });
 
   // Validation errors state
@@ -40,7 +42,8 @@ export function MainPanel({
       name: selectedServer.name,
       ip: selectedServer.ip,
       dns: selectedServer.dns,
-      snmp: selectedServer.snmp
+      snmp: selectedServer.snmp,
+      netapp: selectedServer.netapp
     });
   }
 
@@ -54,6 +57,10 @@ export function MainPanel({
 
   const handleSNMPChange = (snmpConfig: SnmpConfig) => {
     setFormData(prev => ({ ...prev, snmp: snmpConfig }));
+  };
+
+  const handleNetAppChange = (netappConfig: NetAppConfig) => {
+    setFormData(prev => ({ ...prev, netapp: netappConfig }));
   };
 
   // Check if any validation errors exist
@@ -86,6 +93,14 @@ export function MainPanel({
             <SNMPConfigSection
               snmpConfig={formData.snmp}
               onChange={handleSNMPChange}
+            />
+          </CollapsibleConfigSection>
+
+          {/* NetApp Configuration Section */}
+          <CollapsibleConfigSection title="NetApp Configuration" defaultOpen={false}>
+            <NetAppConfigSection
+              netappConfig={formData.netapp}
+              onChange={handleNetAppChange}
             />
           </CollapsibleConfigSection>
         </div>
