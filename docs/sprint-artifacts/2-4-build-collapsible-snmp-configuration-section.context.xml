@@ -1,0 +1,290 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>Build Collapsible SNMP Configuration Section</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-19</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-4-build-collapsible-snmp-configuration-section.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to expand an SNMP section to configure disk monitoring</iWant>
+    <soThat>I can enable SNMP and define disk mappings</soThat>
+    <tasks>
+- Task 1: Create CollapsibleConfigSection reusable component (AC: 1, 2, 3, 4, 8)
+  - Create new file `src/components/config/forms/shared/CollapsibleConfigSection.tsx`
+  - Import shadcn/ui Collapsible, CollapsibleTrigger, CollapsibleContent components
+  - Add props: `title: string`, `defaultOpen?: boolean`, `children: ReactNode`
+  - Implement header with title and chevron icon (lucide-react ChevronRight/ChevronDown)
+  - Add state for open/closed: `useState<boolean>(defaultOpen || false)`
+  - Rotate chevron icon based on open state: `className={open ? 'rotate-90' : ''}`
+  - Add smooth animation via Tailwind: `transition-transform duration-200`
+  - Style header: white background, gray border, hover state (light gray bg)
+  - Style content: padding, white background
+  - Export component
+
+- Task 2: Create SNMPConfigSection component with checkbox and fields (AC: 5, 6, 7)
+  - Create new file `src/components/config/forms/server/SNMPConfigSection.tsx`
+  - Import shadcn/ui Checkbox component
+  - Add props: `snmpConfig: SNMPConfig | undefined`, `onChange: (config: SNMPConfig) => void`
+  - Define SNMPConfig type: `{ enabled: boolean, storageIndexes: string, diskMappings: Array<{ index: number, name: string }> }`
+  - Add state for enabled checkbox: `useState<boolean>(snmpConfig?.enabled || false)`
+  - Add "Enable SNMP monitoring" Checkbox with onChange handler
+  - Add "Storage Indexes" Input (disabled when !enabled)
+  - Add helper text: "Comma-separated list (e.g., 2,3,4)"
+  - Pre-populate fields from snmpConfig prop if exists
+
+- Task 3: Implement dynamic Disk Mappings list (AC: 5)
+  - Add state for disk mappings: `useState<Array<{ index: number, name: string }>>(snmpConfig?.diskMappings || [])`
+  - Create "Disk Mappings" section label
+  - Map over diskMappings array to render rows
+  - Each row contains: FormGroup with Label "Index" + Input type="number", FormGroup with Label "Name" + Input type="text", Button with X icon to remove row
+  - Add "+ Add Disk" button below list (disabled when !enabled)
+  - Implement addDiskMapping function: append `{ index: 0, name: '' }` to array
+  - Implement removeDiskMapping function: filter out by index
+  - Use FormRow for two-column layout (Index + Name side-by-side)
+
+- Task 4: Wire SNMPConfigSection into MainPanel (AC: All)
+  - Modify `src/components/config/MainPanel.tsx`
+  - Import CollapsibleConfigSection and SNMPConfigSection
+  - Add SNMP config state to formValues tracking
+  - Add SNMPConfigSection below BasicServerInfoSection
+  - Wrap SNMPConfigSection in CollapsibleConfigSection with title="SNMP Configuration"
+  - Set `defaultOpen={false}` (collapsed by default)
+  - Pass `snmpConfig={formValues.snmpConfig}` prop
+  - Pass `onChange={handleSNMPChange}` callback
+  - Implement handleSNMPChange to update formValues state
+
+- Task 5: Add conditional enable/disable logic (AC: 6)
+  - In SNMPConfigSection, add `disabled` prop to all inputs when `!enabled`
+  - Apply gray background to disabled inputs: `bg-gray-100`
+  - Apply cursor-not-allowed to disabled inputs
+  - "+ Add Disk" button disabled when !enabled
+  - Remove buttons always enabled (can remove even when SNMP disabled)
+  - Visual indication: reduced opacity on disabled fields
+
+- Task 6: Test SNMP section behavior (AC: All)
+  - Navigate to `/config` and select a server
+  - Verify "SNMP Configuration" section appears below Basic Information
+  - Verify section is collapsed by default
+  - Verify chevron points right (▶) when collapsed
+  - Click section header → verify smooth expansion (200ms)
+  - Verify chevron rotates to point down (▼) when expanded
+  - Verify "Enable SNMP monitoring" checkbox is present
+  - Uncheck checkbox → verify all SNMP fields become disabled
+  - Verify disabled fields have gray background
+  - Check checkbox → verify fields become enabled
+  - Enter "2,3,4" in Storage Indexes field
+  - Click "+ Add Disk" → verify new disk mapping row appears
+  - Enter Index "2" and Name "C:\\" in first row
+  - Click "+ Add Disk" again → verify second row appears
+  - Enter Index "3" and Name "D:\\" in second row
+  - Click X button on first row → verify row is removed
+  - Verify remaining row (D:\\) is still present
+  - Collapse section → verify content hidden
+  - Expand section → verify state preserved (fields still filled)
+  - Select different server with existing SNMP config → verify fields pre-populated
+  - Build project (npm run build) → verify no TypeScript errors
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **Given** I am editing a server
+   **When** I view the form
+   **Then** I see a collapsible "SNMP Configuration" section below Basic Information
+
+2. **And** the section is collapsed by default (chevron points right ▶)
+
+3. **And** clicking the section header expands it smoothly (200ms animation)
+
+4. **And** when expanded, chevron rotates to point down (▼)
+
+5. **And** the expanded section contains:
+   - "Enable SNMP monitoring" checkbox
+   - "Storage Indexes" text input (comma-separated, e.g., "2,3,4")
+   - "Disk Mappings" dynamic list with:
+     - Each mapping has: Index (number input) + Custom Name (text input)
+     - "+ Add Disk" button to add new mapping row
+     - "Remove" button (X icon) for each mapping row
+
+6. **And** SNMP fields are only enabled when checkbox is checked
+
+7. **And** pre-populated with existing SNMP config if server has it
+
+8. **And** the section uses shadcn/ui Collapsible component with smooth expand/collapse animation
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document - SNMP Configuration</title>
+        <section>FR13-FR18: SNMP Configuration</section>
+        <snippet>Defines 6 functional requirements for SNMP monitoring: enable/disable per server (FR13), configure storage indexes (FR14), define disk mappings with custom names (FR15), add/remove disk configurations (FR16-17), and expand/collapse section (FR18).</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification - CollapsibleConfigSection Component</title>
+        <section>Section 6.1: Component Library</section>
+        <snippet>Specifies CollapsibleConfigSection component using shadcn/ui Collapsible with chevron rotation (90deg when open), 200ms transition, white background with gray border, and hover state (light gray bg). Used for expandable form sections like SNMP and NetApp configuration.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification - Form Patterns</title>
+        <section>Section 7.1: Form Patterns</section>
+        <snippet>Defines standard form components (FormSection, FormRow, FormGroup) with consistent styling, spacing (16px gap), and conditional disable states using gray background (bg-gray-100) and cursor-not-allowed.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification - Accessibility Requirements</title>
+        <section>Section 8.2: Accessibility</section>
+        <snippet>Requires WCAG AA compliance with proper ARIA attributes (aria-expanded for collapsible sections, aria-label for icon-only buttons), keyboard navigation support, and sufficient color contrast for disabled states.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture - Server Configuration Data Model</title>
+        <section>servers.json Schema</section>
+        <snippet>SNMPConfig structure in servers.json includes: enabled (boolean), storageIndexes (comma-separated string), and diskMappings array with { index: number, name: string } objects. Example: diskMappings: [{ index: 2, name: "C:\\" }, { index: 3, name: "D:\\" }]</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Server Management - Story 2.4</title>
+        <section>Story 2.4: Build Collapsible SNMP Configuration Section</section>
+        <snippet>Fourth story in Epic 2. Builds collapsible SNMP section with enable/disable checkbox, storage indexes input, and dynamic disk mappings list. Reuses FormSection/FormRow/FormGroup components from Stories 2.2-2.3. Prerequisites: Story 2.2 (basic form exists).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/config/forms/shared/FormGroup.tsx</path>
+        <kind>component</kind>
+        <symbol>FormGroup</symbol>
+        <lines>1-47</lines>
+        <reason>Reusable form field wrapper with label, error display, and ARIA attributes. Will be used for Storage Indexes input and disk mapping fields (Index, Name). Supports helperText prop for hints like "Comma-separated list".</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/forms/shared/FormRow.tsx</path>
+        <kind>component</kind>
+        <symbol>FormRow</symbol>
+        <lines>1-13</lines>
+        <reason>Two-column grid layout component (grid-cols-2 gap-4). Will be used to display disk mapping fields (Index + Name) side-by-side in each row.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/collapsible.tsx</path>
+        <kind>component</kind>
+        <symbol>Collapsible, CollapsibleTrigger, CollapsibleContent</symbol>
+        <lines>1-11</lines>
+        <reason>shadcn/ui Collapsible component (wraps Radix UI). Required for CollapsibleConfigSection - provides expand/collapse functionality with built-in accessibility and smooth animations.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/checkbox.tsx</path>
+        <kind>component</kind>
+        <symbol>Checkbox</symbol>
+        <lines>installed</lines>
+        <reason>shadcn/ui Checkbox component. Required for "Enable SNMP monitoring" toggle that controls whether all SNMP fields are enabled or disabled.</reason>
+      </artifact>
+      <artifact>
+        <path>src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>SnmpConfig</symbol>
+        <lines>8-12</lines>
+        <reason>Existing SNMP config type definition: { enabled: boolean, storageIndexes: number[], disks?: DiskConfig[] }. IMPORTANT: Story needs to adapt to use storageIndexes as string (comma-separated) for input field, or convert array to string for display.</reason>
+      </artifact>
+      <artifact>
+        <path>src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>DiskConfig</symbol>
+        <lines>3-6</lines>
+        <reason>Disk mapping type: { index: number, name?: string }. Maps to diskMappings in SNMP section. Note: disks field in SnmpConfig may need to be renamed to diskMappings for consistency with story spec.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>1-95</lines>
+        <reason>Integration point for new SNMP section. Currently renders BasicServerInfoSection in scrollable area (lines 65-74). New SNMPConfigSection will be added below BasicServerInfoSection. formData state needs to include snmpConfig field.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/forms/server/BasicServerInfoSection.tsx</path>
+        <kind>component</kind>
+        <symbol>BasicServerInfoSection</symbol>
+        <lines>existing</lines>
+        <reason>Current form section component. SNMP section will be added below this component in MainPanel. Reference for pattern: uses FormGroup, FormRow, validation state management.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <frontend>
+        <framework name="React" version="18.2.0" />
+        <framework name="TypeScript" version="5.2.2" />
+        <framework name="Vite" version="4.5.3" />
+        <framework name="Tailwind CSS" version="3.4.3" />
+        <library name="@radix-ui/react-collapsible" version="1.1.12" purpose="Collapsible component (via shadcn/ui)" />
+        <library name="@radix-ui/react-checkbox" version="1.3.3" purpose="Checkbox component (via shadcn/ui)" />
+        <library name="@radix-ui/react-label" version="2.1.8" purpose="Label component (via shadcn/ui)" />
+        <library name="lucide-react" version="0.554.0" purpose="Icons: ChevronRight, X, Plus" />
+        <library name="class-variance-authority" version="0.7.1" purpose="shadcn/ui styling" />
+        <library name="clsx" version="2.1.1" purpose="Conditional classNames" />
+        <library name="tailwind-merge" version="3.4.0" purpose="Merge Tailwind classes" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Reuse existing FormGroup, FormRow, and FormSection components from Stories 2.2-2.3. Do not create new form primitives.</constraint>
+    <constraint>Use shadcn/ui Collapsible component (already installed) - do not implement custom collapse logic.</constraint>
+    <constraint>Use shadcn/ui Checkbox component for enable/disable toggle - do not use HTML input type="checkbox".</constraint>
+    <constraint>IMPORTANT: SnmpConfig type in server.ts uses storageIndexes: number[] but story requires string input (comma-separated). Must handle conversion or update type definition.</constraint>
+    <constraint>Conditional disable pattern: Apply bg-gray-100 and cursor-not-allowed classes to disabled inputs. Use disabled prop on Input components.</constraint>
+    <constraint>Icon imports: Use lucide-react for ChevronRight, X (remove), and Plus (add disk) icons.</constraint>
+    <constraint>Animation: Chevron rotation uses Tailwind transition-transform duration-200, rotate-90 when open.</constraint>
+    <constraint>Accessibility: Add aria-expanded to CollapsibleTrigger button, aria-label to icon-only buttons (Remove).</constraint>
+    <constraint>Component file locations: Shared components in src/components/config/forms/shared/, server-specific in src/components/config/forms/server/.</constraint>
+    <constraint>State management: SNMP config state managed in MainPanel formData, passed to SNMPConfigSection via props with onChange callback.</constraint>
+    <constraint>Default state: Section collapsed by default (defaultOpen={false}), SNMP enabled defaults to false, diskMappings defaults to empty array.</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>CollapsibleConfigSectionProps</name>
+      <kind>React Component Interface</kind>
+      <signature>{ title: string; defaultOpen?: boolean; children: ReactNode }</signature>
+      <path>src/components/config/forms/shared/CollapsibleConfigSection.tsx</path>
+    </interface>
+    <interface>
+      <name>SNMPConfigSectionProps</name>
+      <kind>React Component Interface</kind>
+      <signature>{ snmpConfig?: SnmpConfig; onChange: (config: SnmpConfig) => void }</signature>
+      <path>src/components/config/forms/server/SNMPConfigSection.tsx</path>
+    </interface>
+    <interface>
+      <name>SnmpConfig</name>
+      <kind>TypeScript Type</kind>
+      <signature>{ enabled: boolean; storageIndexes: number[] | string; disks?: DiskConfig[] }</signature>
+      <path>src/types/server.ts</path>
+      <note>Type may need update: storageIndexes should be string for input field (comma-separated) or handle conversion. Consider renaming disks to diskMappings for consistency.</note>
+    </interface>
+    <interface>
+      <name>DiskConfig</name>
+      <kind>TypeScript Type</kind>
+      <signature>{ index: number; name?: string }</signature>
+      <path>src/types/server.ts</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>E2E testing using Playwright with custom fixtures for config file isolation, SSE client for event testing, and factory functions for test data generation. Manual testing checklist provided in story for immediate validation. Future: Consider component tests using React Testing Library.</standards>
+    <locations>tests/e2e/*.spec.ts for E2E tests. Manual testing via browser at http://localhost:5173/config</locations>
+    <ideas>
+      <idea ac="AC1,AC2">Verify SNMP Configuration section appears below Basic Information and is collapsed by default with chevron pointing right</idea>
+      <idea ac="AC3,AC4">Test smooth expand animation (200ms) and chevron rotation to point down when section is expanded</idea>
+      <idea ac="AC5">Verify all SNMP fields present: Enable checkbox, Storage Indexes input, Disk Mappings dynamic list with Add/Remove functionality</idea>
+      <idea ac="AC6">Test conditional enable/disable: uncheck Enable checkbox and verify all fields become disabled with gray background; re-check and verify fields re-enable</idea>
+      <idea ac="AC7">Load server with existing SNMP config (e.g., storageIndexes: "2,3,4", diskMappings: [{ index: 2, name: "C:\\" }]) and verify fields pre-populate correctly</idea>
+      <idea ac="AC8">Verify shadcn/ui Collapsible component used (inspect Radix UI attributes: data-state, data-radix-collapsible)</idea>
+      <idea ac="All">Test dynamic list functionality: Add multiple disk mappings, verify each has Index + Name inputs, remove mappings and verify list updates</idea>
+      <idea ac="All">Test state persistence: collapse section, expand again, verify form values retained (not reset)</idea>
+      <idea ac="All">Accessibility check: verify aria-expanded on trigger button, aria-label on icon-only Remove buttons, keyboard navigation (Tab through fields)</idea>
+      <idea ac="All">Build verification: Run npm run build and verify no TypeScript errors (type compatibility with SnmpConfig)</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -6,6 +6,7 @@ interface PanelHeaderProps {
   onCancel: () => void;        // Cancel button handler
   onSave: () => void;          // Save button handler
   isDirty?: boolean;           // Optional: show unsaved indicator (Epic 2.9)
+  hasErrors?: boolean;         // Disable Save button when validation errors exist
 }
 
 export function PanelHeader({
@@ -13,7 +14,8 @@ export function PanelHeader({
   onDelete,
   onCancel,
   onSave,
-  isDirty = false
+  isDirty = false,
+  hasErrors = false
 }: PanelHeaderProps) {
   return (
     <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
@@ -29,7 +31,13 @@ export function PanelHeader({
           <Button variant="secondary" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="default" size="sm" onClick={onSave}>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onSave}
+            disabled={hasErrors}
+            className={hasErrors ? 'opacity-50 cursor-not-allowed' : ''}
+          >
             Save Server
           </Button>
         </div>

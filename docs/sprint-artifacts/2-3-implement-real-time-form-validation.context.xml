@@ -1,0 +1,281 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>3</storyId>
+    <title>Implement Real-Time Form Validation</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-19</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-3-implement-real-time-form-validation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to see validation errors immediately when I fill out server fields</iWant>
+    <soThat>I can correct mistakes before saving</soThat>
+    <tasks>
+      - Task 1: Create validation utilities module (AC: 2, 3)
+        - Create new file `src/utils/validation.ts`
+        - Implement `validateRequired(value: string): string | null`
+        - Implement `validateIPv4(ip: string): string | null` - regex: `/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/`
+        - Implement `checkDuplicateServerId(id: string, servers: ServerConfig[]): string | null`
+        - Implement `validateServerName(name: string): string | null` (required, 1-50 chars)
+        - Implement `validateDNS(dns: string): string | null` (required, 1-100 chars)
+        - Export all validation functions with TypeScript types
+
+      - Task 2: Enhance FormGroup component to display validation errors (AC: 4, 5, 6)
+        - Modify `src/components/config/forms/shared/FormGroup.tsx`
+        - Add htmlFor prop for linking labels to inputs
+        - Clone child input element to inject aria attributes
+        - Apply conditional border color: `border-red-600 focus:ring-red-600` if error exists
+        - Add `aria-invalid="true"` to input if error exists
+        - Add `aria-describedby` linking to error message element ID
+        - Display error message with role="alert"
+
+      - Task 3: Add validation state management to BasicServerInfoSection (AC: 1, 2, 3, 7)
+        - Modify `src/components/config/forms/server/BasicServerInfoSection.tsx`
+        - Add validation error state: `useState<Record<string, string | null>>`
+        - Create blur handlers for Server Name, IP Address, DNS Address
+        - Call appropriate validation functions on blur (not onChange)
+        - Update local error state and propagate to parent via onValidationChange callback
+        - Pass error messages to FormGroup components
+        - Add htmlFor IDs to all FormGroup instances
+
+      - Task 4: Implement Save button disabled state (AC: 8)
+        - Modify `src/components/config/PanelHeader.tsx`
+        - Add `hasErrors` prop (boolean)
+        - Conditionally disable Save button when hasErrors is true
+        - Add visual styling: opacity-50 and cursor-not-allowed when disabled
+
+      - Task 5: Wire validation state to MainPanel and PanelHeader (AC: 8)
+        - Modify `src/components/config/MainPanel.tsx`
+        - Add validation errors state
+        - Create handleValidationChange callback for BasicServerInfoSection
+        - Calculate hasErrors: `Object.values(validationErrors).some(error => error !== null)`
+        - Pass hasErrors prop to PanelHeader
+
+      - Task 6: Test validation behavior (AC: All)
+        - Manual testing checklist in story Dev Notes section
+        - Test on-blur validation timing
+        - Test error display, clearing, and accessibility
+        - Verify Save button disabled state
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. When I blur a required field that is empty, I see inline error: "This field is required"
+    2. When I blur IP Address with invalid format, I see error: "Invalid IPv4 format (expected: xxx.xxx.xxx.xxx)"
+    3. When I blur Server ID (Add form) with duplicate, I see error: "Server ID '[id]' already exists"
+    4. Error messages appear in red text (#dc2626, 12px font)
+    5. Fields with errors have red border instead of gray
+    6. Invalid fields get `aria-invalid="true"` attribute
+    7. Validation happens on blur, not on every keystroke
+    8. Save button is disabled while validation errors exist
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>Estatus Web - Configuration UI Architecture</title>
+        <section>Decision 8: Config Validation Layer</section>
+        <snippet>Defense in Depth: Frontend validation (UX feedback, immediate error display) + Backend validation (security, data integrity). Story 2.3 implements frontend only. Validation runs client-side, prevents form submission, backend re-validates in Story 2.6.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>Estatus Web - Configuration UI Architecture</title>
+        <section>Implementation Patterns - Code Structure Patterns</section>
+        <snippet>React components use hooks at top, event handlers mid, effects after, render last. Backend services have private properties, constructor, public methods, private helpers. Validation utilities export typed functions.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>2.8 - Data Models and Contracts (Validation Rules Table)</section>
+        <snippet>Validation rules: Server ID (required, unique, format: server-###), Name (required, 1-50 chars), IP (required, valid IPv4), DNS (required, 1-100 chars). Frontend validates for UX, backend re-validates for security.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 - Form Patterns (Validation Timing)</section>
+        <snippet>Validation triggers on field blur (user leaves field). NOT on keystroke (too aggressive) or submit only (too late). Blur is UX sweet spot: immediate enough for correction, not aggressive enough to interrupt typing.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>8.2 - Accessibility Requirements</section>
+        <snippet>ARIA attributes required: aria-invalid="true" on invalid fields, aria-describedby linking to error message, role="alert" on error messages. Red border with 4.5:1 contrast ratio minimum. Error text is redundant signal (not color-only).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR51-FR58: Form Validation & Error Handling</section>
+        <snippet>FR51: Validate required fields. FR52: Show inline errors below fields. FR54: Prevent saving with errors. FR55: Real-time validation on blur. FR57: Detect duplicate server IDs. FR58: Validate IP format.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/config/forms/shared/FormGroup.tsx</path>
+        <kind>component</kind>
+        <symbol>FormGroup</symbol>
+        <lines>1-35</lines>
+        <reason>Existing FormGroup component has error prop and displays error messages. Story 2.3 enhances it to add aria attributes, red borders, and clone child inputs for accessibility.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/forms/server/BasicServerInfoSection.tsx</path>
+        <kind>component</kind>
+        <symbol>BasicServerInfoSection</symbol>
+        <lines>1-79</lines>
+        <reason>Form component for Basic Information section. Story 2.3 adds validation state management, blur handlers, and propagates errors to FormGroup. Current implementation uses onChange only - needs onBlur handlers.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>1-40</lines>
+        <reason>Panel header with Save/Cancel/Delete buttons. Story 2.3 adds hasErrors prop to conditionally disable Save button. Currently has isDirty prop - will add hasErrors alongside it.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>1-84</lines>
+        <reason>Main panel managing form state. Story 2.3 adds validation error tracking, handleValidationChange callback, and hasErrors calculation. Currently manages formData state - will add validationErrors state.</reason>
+      </artifact>
+      <artifact>
+        <path>src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>ServerConfig</symbol>
+        <lines>29-38</lines>
+        <reason>TypeScript interface for server configuration. Validation functions will use this type. Fields: id, name, ip, dns (all required for validation).</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/input.tsx</path>
+        <kind>shadcn-ui-component</kind>
+        <symbol>Input</symbol>
+        <lines>all</lines>
+        <reason>shadcn/ui Input component. Accepts aria attributes, className overrides, onBlur handlers. Used in BasicServerInfoSection - will receive aria-invalid and aria-describedby from cloned FormGroup child.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/label.tsx</path>
+        <kind>shadcn-ui-component</kind>
+        <symbol>Label</symbol>
+        <lines>all</lines>
+        <reason>shadcn/ui Label component. Used in FormGroup. Will receive htmlFor attribute to link to input IDs for accessibility.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="typescript" version="^5.2.2" />
+        <package name="tailwindcss" version="^3.4.3" />
+        <package name="@radix-ui/react-label" version="^2.1.8" />
+        <package name="clsx" version="^2.1.1" />
+        <package name="class-variance-authority" version="^0.7.1" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Validation must happen on blur only, not on every keystroke (UX requirement)
+    - Use existing FormGroup error prop - do not create new error display patterns
+    - All validation functions must return string | null (error message or null)
+    - IPv4 validation regex: `/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/` with additional octet range check (0-255)
+    - Error messages must be red text (#dc2626, 12px font size: text-xs text-red-600)
+    - Invalid fields must have red border (border-red-600) and red focus ring (focus:ring-red-600)
+    - Must add aria-invalid="true" and aria-describedby to invalid inputs for accessibility
+    - Error messages must have role="alert" for screen reader announcements
+    - Save button disabled state: opacity-50 cursor-not-allowed
+    - No breaking changes to existing components - all enhancements are additive
+    - FormGroup must clone child input element to inject aria attributes (cannot directly modify Input props)
+    - Validation state management: local state in BasicServerInfoSection, propagate to parent via callback
+    - Server Name max length: 50 characters
+    - DNS Address max length: 100 characters
+    - Required fields: Server Name, IP Address, DNS Address (Server ID is disabled in edit mode)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>validateRequired</name>
+      <kind>function signature</kind>
+      <signature>function validateRequired(value: string | undefined | null, fieldName?: string): string | null</signature>
+      <path>src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>validateIPv4</name>
+      <kind>function signature</kind>
+      <signature>function validateIPv4(ip: string): string | null</signature>
+      <path>src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>validateServerName</name>
+      <kind>function signature</kind>
+      <signature>function validateServerName(name: string): string | null</signature>
+      <path>src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>validateDNS</name>
+      <kind>function signature</kind>
+      <signature>function validateDNS(dns: string): string | null</signature>
+      <path>src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>checkDuplicateServerId</name>
+      <kind>function signature</kind>
+      <signature>function checkDuplicateServerId(id: string, servers: ServerConfig[], currentServerId?: string): string | null</signature>
+      <path>src/utils/validation.ts (to be created)</path>
+    </interface>
+    <interface>
+      <name>FormGroup (enhanced)</name>
+      <kind>React component interface</kind>
+      <signature>interface FormGroupProps { label: string, required?: boolean, children: ReactElement, error?: string | null, helperText?: string, htmlFor?: string }</signature>
+      <path>src/components/config/forms/shared/FormGroup.tsx (to be modified)</path>
+    </interface>
+    <interface>
+      <name>BasicServerInfoSection (enhanced)</name>
+      <kind>React component interface</kind>
+      <signature>interface BasicServerInfoSectionProps { serverId: string, serverName: string, ip: string, dns: string, onFieldChange: (field: string, value: string) => void, onValidationChange?: (errors: Record&lt;string, string | null&gt;) => void, isEditMode?: boolean }</signature>
+      <path>src/components/config/forms/server/BasicServerInfoSection.tsx (to be modified)</path>
+    </interface>
+    <interface>
+      <name>PanelHeader (enhanced)</name>
+      <kind>React component interface</kind>
+      <signature>interface PanelHeaderProps { title: string, onDelete: () => void, onCancel: () => void, onSave: () => void, isDirty?: boolean, hasErrors?: boolean }</signature>
+      <path>src/components/config/PanelHeader.tsx (to be modified)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      - Manual testing checklist in story Dev Notes section (comprehensive)
+      - Test validation timing: on blur only, not on keystroke
+      - Test error display: red text, red border, correct messages
+      - Test error clearing when field becomes valid
+      - Test Save button disabled state with validation errors
+      - Test accessibility: aria-invalid, aria-describedby, role="alert"
+      - Test edge cases: long names, whitespace, invalid IPs, multiple errors
+      - Test visual design: color values (#dc2626), font sizes (12px), border colors
+      - Build verification: npm run build with no TypeScript errors
+    </standards>
+    <locations>
+      - Manual testing via browser at http://localhost:5173/config
+      - Build tests: `npm run build` (frontend)
+      - Browser DevTools for accessibility attribute inspection
+      - Screen reader testing for aria attribute announcements
+    </locations>
+    <ideas>
+      - AC1: Test required field validation by clearing Server Name and blurring - verify "Server name is required" error appears
+      - AC2: Test IPv4 validation with invalid IPs (999.999.999.999, 192.168.1) - verify specific error messages
+      - AC3: Test duplicate server ID detection (prepared for Add Server workflow in Story 2.7)
+      - AC4: Verify error text color (#dc2626) and font size (12px) using browser inspector
+      - AC5: Verify red border appears on invalid fields (border-red-600 class)
+      - AC6: Verify aria-invalid="true" attribute on invalid inputs using DevTools
+      - AC7: Test validation timing - type in field, verify no error during typing, blur, verify error appears
+      - AC8: Create validation error, verify Save button disabled, fix error, verify button enabled
+      - Test multiple simultaneous errors - clear all fields, verify all errors shown and Save disabled
+      - Test error clearing - enter valid value, blur, verify error disappears and border returns to gray
+      - Test accessibility - use screen reader (NVDA/JAWS) to verify error announcements
+      - Test edge cases - very long names (>50 chars), very long DNS (>100 chars), whitespace-only values
+    </ideas>
+  </tests>
+</story-context>

@@ -48,9 +48,9 @@ development_status:
 
   epic-2: backlog
   2-1-create-server-edit-form-layout-with-panel-header: done
-  2-2-build-basic-server-information-form-section: backlog
-  2-3-implement-real-time-form-validation: backlog
-  2-4-build-collapsible-snmp-configuration-section: backlog
+  2-2-build-basic-server-information-form-section: done
+  2-3-implement-real-time-form-validation: done
+  2-4-build-collapsible-snmp-configuration-section: done
   2-5-build-collapsible-netapp-configuration-section: backlog
   2-6-implement-save-server-functionality-with-backend-api: backlog
   2-7-implement-add-new-server-workflow: backlog
