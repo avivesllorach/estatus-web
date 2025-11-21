@@ -310,4 +310,30 @@ export const configApi = {
       throw error;
     }
   },
+
+  /**
+   * Delete server configuration
+   */
+  async deleteServer(id: string): Promise<string> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/servers/${id}`, {
+        method: 'DELETE',
+      });
+
+      const result: ApiResponse<{ deletedId: string }> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete server');
+      }
+
+      if (!result.data?.deletedId) {
+        throw new Error('Server deletion succeeded but no deleted ID returned');
+      }
+
+      return result.data.deletedId;
+    } catch (error) {
+      console.error(`Error deleting server ${id}:`, error);
+      throw error;
+    }
+  },
 };

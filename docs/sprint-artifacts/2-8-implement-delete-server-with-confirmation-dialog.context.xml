@@ -1,0 +1,390 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>8</storyId>
+    <title>Implement Delete Server with Confirmation Dialog</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-21</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-8-implement-delete-server-with-confirmation-dialog.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to delete a server with a confirmation prompt</iWant>
+    <soThat>I can remove decommissioned servers safely</soThat>
+    <tasks>
+      - Task 1: Add Delete button to PanelHeader component (AC: 1, 2)
+      - Task 2: Install shadcn/ui Dialog component if not present (AC: 3, 4, 5)
+      - Task 3: Create confirmation dialog state and handler in MainPanel (AC: 3, 4, 5)
+      - Task 4: Implement delete confirmation dialog UI (AC: 4, 5)
+      - Task 5: Create backend DELETE endpoint (AC: 6, 7, 8, 9)
+      - Task 6: Implement frontend API service for deleteServer (AC: 6)
+      - Task 7: Wire delete handler in MainPanel (AC: 6, 10, 11, 12, 13)
+      - Task 8: Handle referential integrity cleanup (AC: 8)
+      - Task 9: Test delete server workflow end-to-end (AC: All)
+      - Task 10: Update sprint-status.yaml (internal tracking)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Delete button visible in edit mode with destructive styling (red text, red border)
+    AC2: Delete button positioned on left side of header, separated from Cancel/Save buttons
+    AC3: Clicking Delete button shows confirmation dialog as modal overlay
+    AC4: Dialog displays title "Delete Server?", message with server name, Cancel/Delete Server buttons, semi-transparent backdrop
+    AC5: Dialog dismissible via Escape key, Cancel button, or clicking backdrop
+    AC6: Clicking "Delete Server" sends DELETE request to /api/config/servers/:id
+    AC7: Backend removes server from servers.json atomically (temp file + rename pattern)
+    AC8: Backend removes serverId from all groups in dashboard-layout.json (referential integrity)
+    AC9: Backend returns success with ApiResponse&lt;{ deletedId: string }&gt;
+    AC10: Server disappears from sidebar list immediately
+    AC11: Main panel form clears and shows empty state (no server selected)
+    AC12: Success toast notification "✓ Server deleted successfully" auto-dismisses after 3 seconds
+    AC13: On failure, error toast "✗ Failed to delete server" persists until manually dismissed, server remains in list
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- PRD References -->
+      <artifact>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR7 - Delete Server</section>
+        <snippet>Users can delete monitored servers from the configuration interface. System prompts for confirmation before deletion to prevent accidental removal.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR70 - Data Integrity</section>
+        <snippet>System maintains referential integrity between servers and groups. When a server is deleted, it is automatically removed from all group assignments.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>NFR-P1 - Configuration Save Response Time</section>
+        <snippet>Save operations (including delete) complete within 500ms. Atomic file writes optimized with temp file + rename pattern.</snippet>
+      </artifact>
+
+      <!-- Architecture References -->
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>AD#6 - REST API Endpoint Design</section>
+        <snippet>DELETE /api/config/servers/:id follows RESTful conventions. Returns 200 OK on success, 404 Not Found if server doesn't exist, 500 on file write failure.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>AD#4 - Atomic File Writes</section>
+        <snippet>All configuration file modifications use atomic write pattern: write to temp file, then rename. Prevents corruption from crashes or concurrent access.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>AD#7 - Group-to-Server Relationship</section>
+        <snippet>Groups reference servers via serverIds array. DELETE operation must clean up these references to maintain referential integrity.</snippet>
+      </artifact>
+
+      <!-- UX Design References -->
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>5.1 Journey 3 - Delete Server</section>
+        <snippet>User selects server, clicks Delete button, confirms in dialog. Dialog shows server name and warning: "This will stop monitoring immediately."</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Confirmation Patterns</section>
+        <snippet>Only confirm destructive/irreversible actions. Dialog uses destructive button styling (red) for delete action. Cancel is secondary style.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Button Hierarchy</section>
+        <snippet>Destructive actions: White background, red text (#dc2626), red border. Position destructive on left, separated visually from primary actions.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Feedback Patterns</section>
+        <snippet>Success toasts auto-dismiss after 3 seconds. Error toasts persist (Infinity duration) until user manually dismisses.</snippet>
+      </artifact>
+
+      <!-- Epic Technical Specification -->
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>Delete Server Workflow</section>
+        <snippet>User clicks Delete → Confirmation dialog appears → Confirm → DELETE /api/config/servers/:id → Remove from servers.json + all groups → Success toast + sidebar update + form clear.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>API Request/Response Contracts</section>
+        <snippet>DELETE /api/config/servers/:id returns ApiResponse&lt;{ deletedId: string }&gt;. Status codes: 200 success, 404 not found, 500 server error.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>Referential Integrity Pattern</section>
+        <snippet>cleanupGroupReferences() function maps over all groups and filters serverIds arrays to remove deleted server ID. Groups persist even if empty.</snippet>
+      </artifact>
+    </docs>
+
+    <code>
+      <!-- Backend Code Artifacts -->
+      <artifact>
+        <path>backend/src/routes/config.ts</path>
+        <kind>controller</kind>
+        <symbol>router (Express Router)</symbol>
+        <lines>1-end</lines>
+        <reason>Primary location for adding DELETE /api/config/servers/:id endpoint. Already has POST/PUT endpoints showing error handling patterns (404, 400, 500), ApiResponse format, and atomic write usage.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/utils/fileUtils.ts</path>
+        <kind>utility</kind>
+        <symbol>writeConfigAtomic(filePath: string, data: any)</symbol>
+        <lines>full file</lines>
+        <reason>Essential atomic write function using temp file + rename pattern. DELETE endpoint will use this to safely update servers.json and dashboard-layout.json.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/utils/validation.ts</path>
+        <kind>utility</kind>
+        <symbol>validateServerConfig(config: any), validateIP(ip: string)</symbol>
+        <lines>full file</lines>
+        <reason>Validation patterns for server configuration. DELETE may validate server ID format before deletion attempt.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/config/file-paths.ts</path>
+        <kind>configuration</kind>
+        <symbol>CONFIG_PATHS (servers.json, dashboard-layout.json)</symbol>
+        <lines>full file</lines>
+        <reason>Provides file path constants for servers.json and dashboard-layout.json that DELETE endpoint will read/write.</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>ServerConfig, SnmpConfig, NetAppConfig</symbol>
+        <lines>full file</lines>
+        <reason>Type definitions for server objects that will be filtered/removed during deletion.</reason>
+      </artifact>
+
+      <!-- Frontend Code Artifacts -->
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>full file</lines>
+        <reason>Main form container. Currently has empty onDelete callback (line 273). Must add: dialog state, handleDeleteClick, handleConfirmDelete, delete API call, toast notifications.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>full file</lines>
+        <reason>Header with Delete button already present (lines 31-33) with destructive variant styling. onDelete prop is optional - needs implementation in MainPanel.</reason>
+      </artifact>
+      <artifact>
+        <path>src/services/api.ts</path>
+        <kind>service</kind>
+        <symbol>configApi.createServer, configApi.updateServer</symbol>
+        <lines>full file</lines>
+        <reason>API client with POST/PUT methods. Must add deleteServer(id: string) method following DELETE /api/config/servers/:id endpoint. Error handling pattern established.</reason>
+      </artifact>
+
+      <!-- Frontend UI Components -->
+      <artifact>
+        <path>src/components/ui/dialog.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter</symbol>
+        <lines>full file</lines>
+        <reason>shadcn Dialog components for confirmation modal. Already styled with animations, backdrop, keyboard support (Escape to close), and focus trap.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/button.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>Button, buttonVariants (destructive variant)</symbol>
+        <lines>full file</lines>
+        <reason>Button component for Cancel/Delete buttons in dialog. Destructive variant for red delete button styling.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/toast.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>Toast, ToastTitle, ToastDescription</symbol>
+        <lines>full file</lines>
+        <reason>Toast notification components for success/error feedback after delete operation.</reason>
+      </artifact>
+      <artifact>
+        <path>src/hooks/use-toast.ts</path>
+        <kind>hook</kind>
+        <symbol>useToast() hook</symbol>
+        <lines>full file</lines>
+        <reason>Hook for triggering notifications. Already used in MainPanel for save operations. Will trigger delete success/error toasts.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <node>
+        <package>express</package>
+        <version>^4.18.2</version>
+        <reason>Web framework for backend API routes</reason>
+      </node>
+      <node>
+        <package>react</package>
+        <version>^18.x</version>
+        <reason>UI framework for dialog and form components</reason>
+      </node>
+      <node>
+        <package>@radix-ui/react-dialog</package>
+        <version>latest</version>
+        <reason>Primitives for shadcn Dialog component (modal, backdrop, focus trap)</reason>
+      </node>
+      <node>
+        <package>typescript</package>
+        <version>^5.3.3</version>
+        <reason>Type safety for ServerConfig, ApiResponse interfaces</reason>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - DELETE button only renders when onDelete callback provided (add mode has no delete)
+    - DELETE endpoint must use atomic write pattern (temp file + rename) to prevent corruption
+    - DELETE must maintain referential integrity: remove serverId from all groups in dashboard-layout.json
+    - Confirmation dialog required - no silent deletion (UX requirement for destructive actions)
+    - Success toast auto-dismisses after 3 seconds; error toast persists until manual dismiss
+    - DELETE completes within 500ms performance target (NFR-P1)
+    - If dashboard-layout.json doesn't exist (Epic 3 not implemented), skip group cleanup with warning log
+    - Backend returns 404 if server not found, 500 on file write failure
+    - Dialog dismissible via Escape key, Cancel button, or backdrop click
+    - Delete button uses destructive variant styling (red text/border) per UX design
+    - Form clears to empty state after successful deletion (selectedServerId = null)
+    - Sidebar list updates immediately after deletion (remove server from local state or trigger refresh)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>DELETE /api/config/servers/:id</name>
+      <kind>REST endpoint</kind>
+      <signature>DELETE /api/config/servers/:id → ApiResponse&lt;{ deletedId: string }&gt;</signature>
+      <path>backend/src/routes/config.ts</path>
+      <description>Deletes server by ID, removes from servers.json and all groups, returns deleted ID</description>
+    </interface>
+
+    <interface>
+      <name>configApi.deleteServer</name>
+      <kind>API service method</kind>
+      <signature>async deleteServer(id: string): Promise&lt;string&gt;</signature>
+      <path>src/services/api.ts</path>
+      <description>Frontend API client method that calls DELETE endpoint, returns deletedId or throws error</description>
+    </interface>
+
+    <interface>
+      <name>writeConfigAtomic</name>
+      <kind>Utility function</kind>
+      <signature>async writeConfigAtomic(filePath: string, data: any): Promise&lt;void&gt;</signature>
+      <path>backend/src/utils/fileUtils.ts</path>
+      <description>Atomically writes JSON data to file using temp file + rename pattern</description>
+    </interface>
+
+    <interface>
+      <name>ApiResponse&lt;T&gt;</name>
+      <kind>Type definition</kind>
+      <signature>type ApiResponse&lt;T&gt; = { success: true; data: T } | { success: false; error: string; validationErrors?: Record&lt;string, string&gt; }</signature>
+      <path>backend/src/routes/config.ts, src/services/api.ts</path>
+      <description>Standard API response format for all config endpoints</description>
+    </interface>
+
+    <interface>
+      <name>Dialog Component API</name>
+      <kind>React component props</kind>
+      <signature>&lt;Dialog open={boolean} onOpenChange={(open: boolean) =&gt; void}&gt;</signature>
+      <path>src/components/ui/dialog.tsx</path>
+      <description>Controlled dialog component with open state and change handler</description>
+    </interface>
+
+    <interface>
+      <name>useToast hook</name>
+      <kind>React hook</kind>
+      <signature>const { toast } = useToast(); toast({ title?, description?, variant?, duration? })</signature>
+      <path>src/hooks/use-toast.ts</path>
+      <description>Hook for triggering toast notifications with configurable duration and variant</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Manual testing approach for MVP (no automated tests required per PRD). Test each workflow end-to-end including happy path, error scenarios, keyboard accessibility, and edge cases. Build verification with `npm run build` ensures zero TypeScript errors.
+    </standards>
+
+    <locations>
+      - Manual testing: Start backend (cd backend && npm run dev), start frontend (npm run dev), navigate to http://localhost:5173/config
+      - Backend test data: backend/servers.json, backend/dashboard-layout.json
+      - Frontend dev tools: Browser Network tab (monitor DELETE requests), Console (check errors)
+    </locations>
+
+    <ideas>
+      <!-- Happy Path Tests -->
+      <test acRef="AC1,AC2">
+        <description>Verify Delete button visible in edit mode with red destructive styling, positioned left of Cancel/Save</description>
+        <steps>Select server → Inspect PanelHeader → Verify Delete button present, red text/border, leftmost position</steps>
+      </test>
+
+      <test acRef="AC3,AC4,AC5">
+        <description>Test confirmation dialog appearance and dismissal</description>
+        <steps>Click Delete → Verify dialog shows with server name, backdrop blocks clicks → Test Escape key, Cancel button, backdrop click all dismiss</steps>
+      </test>
+
+      <test acRef="AC6,AC7,AC9,AC10,AC11,AC12">
+        <description>Happy path: Delete server successfully</description>
+        <steps>Select server-001 → Click Delete → Click "Delete Server" → Verify success toast, server removed from sidebar, form clears to empty state, servers.json updated</steps>
+      </test>
+
+      <test acRef="AC8">
+        <description>Test referential integrity: server removed from groups</description>
+        <steps>Create group with server-001 in serverIds → Delete server-001 → Verify dashboard-layout.json: group exists but serverIds array no longer contains server-001</steps>
+      </test>
+
+      <!-- Error Scenario Tests -->
+      <test acRef="AC13">
+        <description>Test delete failure handling</description>
+        <steps>Stop backend server → Try to delete server → Verify error toast appears and persists, server remains in sidebar</steps>
+      </test>
+
+      <test acRef="AC9">
+        <description>Test 404 error: delete non-existent server</description>
+        <steps>Manually delete server from servers.json → Try to delete via UI → Verify error toast, 404 status in Network tab</steps>
+      </test>
+
+      <!-- Edge Cases -->
+      <test acRef="AC8">
+        <description>Test delete when dashboard-layout.json doesn't exist</description>
+        <steps>Temporarily remove dashboard-layout.json → Delete server → Verify server deleted successfully, backend logs warning about missing layout file</steps>
+      </test>
+
+      <test acRef="AC10">
+        <description>Test delete last server in group</description>
+        <steps>Create group with only server-001 → Delete server-001 → Verify group persists with empty serverIds: []</steps>
+      </test>
+
+      <!-- Accessibility Tests -->
+      <test acRef="AC5">
+        <description>Keyboard accessibility for dialog</description>
+        <steps>Tab to Delete button, press Enter → Dialog opens → Press Escape → Dialog closes → Tab to Delete, Enter → Tab through Cancel/Delete buttons → Press Enter on focused button</steps>
+      </test>
+
+      <!-- Performance Test -->
+      <test acRef="NFR-P1">
+        <description>Verify delete completes within 500ms</description>
+        <steps>Open Network tab → Delete server → Measure time from request to 200 response → Verify &lt;500ms</steps>
+      </test>
+
+      <!-- Regression Test -->
+      <test acRef="General">
+        <description>Verify Stories 2.6 and 2.7 still work (save, add server)</description>
+        <steps>After implementing delete, test save existing server and add new server workflows → Verify no regressions</steps>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

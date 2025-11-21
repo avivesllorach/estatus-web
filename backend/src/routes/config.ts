@@ -307,4 +307,122 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * DELETE /api/config/servers/:id
+ * Delete server configuration
+ *
+ * Response: ApiResponse<{ deletedId: string }>
+ *
+ * Status codes:
+ * - 200: Success
+ * - 404: Server not found
+ * - 500: Server error
+ *
+ * Side effects:
+ * - Removes server from servers.json
+ * - Removes serverId from all groups in dashboard-layout.json (referential integrity)
+ */
+router.delete('/servers/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Read current servers.json
+    const serversContent = await fs.readFile(CONFIG_PATHS.servers, 'utf-8');
+    let servers: ServerConfig[] = JSON.parse(serversContent);
+
+    // Find server by ID
+    const serverIndex = servers.findIndex(s => s.id === id);
+    if (serverIndex === -1) {
+      console.warn('[Config API] Server not found for deletion', {
+        serverId: id,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<never> = {
+        success: false,
+        error: `Server with ID '${id}' not found`,
+      };
+      return res.status(404).json(response);
+    }
+
+    const deletedServer = servers[serverIndex];
+
+    // Remove server from array
+    servers = servers.filter(s => s.id !== id);
+
+    // Write updated servers.json atomically
+    await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    // Clean up group references (referential integrity)
+    // Remove serverId from all groups in dashboard-layout.json
+    try {
+      // Check if dashboard-layout.json exists
+      await fs.access(CONFIG_PATHS.layout);
+
+      // Read and parse layout file
+      const layoutContent = await fs.readFile(CONFIG_PATHS.layout, 'utf-8');
+      const layout = JSON.parse(layoutContent);
+
+      if (layout.groups && Array.isArray(layout.groups)) {
+        // Remove deleted server ID from all groups
+        const affectedGroups: string[] = [];
+        layout.groups = layout.groups.map((group: GroupConfig) => {
+          const originalLength = group.serverIds.length;
+          group.serverIds = group.serverIds.filter((sid: string) => sid !== id);
+
+          if (group.serverIds.length < originalLength) {
+            affectedGroups.push(group.id);
+          }
+
+          return group;
+        });
+
+        // Write updated layout atomically
+        await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+        if (affectedGroups.length > 0) {
+          console.info('[Config API] Server removed from groups', {
+            serverId: id,
+            affectedGroups,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (error) {
+      // dashboard-layout.json might not exist yet (Epic 3 not implemented)
+      // This is not a fatal error - just log a warning
+      console.warn('[Config API] Could not clean up group references (file may not exist)', {
+        serverId: id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    console.info('[Config API] Server deleted successfully', {
+      serverId: id,
+      name: deletedServer.name,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return success with deleted ID
+    const response: ApiResponse<{ deletedId: string }> = {
+      success: true,
+      data: { deletedId: id },
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('[Config API] Server deletion failed', {
+      serverId: id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to delete server',
+    };
+    res.status(500).json(response);
+  }
+});
+
 export default router;

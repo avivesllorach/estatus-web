@@ -8,6 +8,15 @@ import { CollapsibleConfigSection } from './forms/shared/CollapsibleConfigSectio
 import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
 import { configApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 // Helper function to create empty server config template
 function createEmptyServerConfig(): Partial<ServerConfig> {
@@ -76,6 +85,9 @@ export function MainPanel({
 
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
+
+  // Delete confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Ref for auto-focus on Server ID field in add mode
   const serverIdInputRef = useRef<HTMLInputElement>(null);
@@ -258,6 +270,48 @@ export function MainPanel({
     });
   };
 
+  // Delete button click handler - opens confirmation dialog
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
+  };
+
+  // Cancel delete - closes dialog without deleting
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false);
+  };
+
+  // Confirm delete - closes dialog and proceeds with deletion
+  const handleConfirmDelete = async () => {
+    if (!selectedServerId || selectedServerId === '__ADD_MODE__') return;
+
+    setShowDeleteDialog(false);
+    setIsLoading(true);
+
+    try {
+      await configApi.deleteServer(selectedServerId);
+
+      // Success feedback
+      toast({
+        title: 'Server deleted successfully',
+        description: `${formData.name} has been removed from monitoring`,
+        duration: 3000, // Auto-dismiss after 3 seconds (AC #12)
+      });
+
+      // TODO: Clear selection and update sidebar (requires parent state update)
+      // For now, form will stay until parent clears selection
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete server',
+        description: error instanceof Error ? error.message : 'Failed to delete server',
+        duration: Infinity, // Persist until manually dismissed (AC #13)
+      });
+      console.error('Delete failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check if any validation errors exist
   const hasErrors = Object.values(validationErrors).some(error => error !== null);
 
@@ -270,7 +324,7 @@ export function MainPanel({
       <div className="flex-1 bg-gray-50 flex flex-col">
         <PanelHeader
           title={panelTitle}
-          onDelete={isEditMode ? () => {} : undefined}
+          onDelete={isEditMode ? handleDeleteClick : undefined}
           onCancel={handleCancel}
           onSave={saveHandler}
           hasErrors={hasErrors}
@@ -305,6 +359,28 @@ export function MainPanel({
             />
           </CollapsibleConfigSection>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        {isEditMode && formData && (
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Server?</DialogTitle>
+                <DialogDescription>
+                  Remove {formData.name} from monitoring? This will stop monitoring immediately.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="secondary" onClick={handleCancelDelete}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleConfirmDelete}>
+                  Delete Server
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     );
   }
