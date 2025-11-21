@@ -1,0 +1,223 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>10</storyId>
+    <title>Implement Cancel Button Behavior</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-21</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-10-implement-cancel-button-behavior.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to click "Cancel" to discard my changes</iWant>
+    <soThat>I can revert to the original server configuration</soThat>
+    <tasks>
+      - Task 1: Verify existing Cancel button handler implementation (handleCancelEdit function)
+      - Task 2: Test Cancel button behavior in edit mode (basic changes, SNMP, NetApp)
+      - Task 3: Implement and test Cancel behavior in add mode (clear form, return to empty state)
+      - Task 4: Verify no unsaved changes warning on Cancel (safe action, no confirmation)
+      - Task 5: Verify unsaved indicator disappears after Cancel (isDirty becomes false)
+      - Task 6: Implement Escape key handler for Cancel (keyboard accessibility)
+      - Task 7: Test Cancel interaction with navigation (integration with Story 2.9)
+      - Task 8: Test Cancel with validation errors (errors disappear on revert)
+      - Task 9: Verify Cancel does not affect other servers (state isolation)
+      - Task 10: Build verification and manual testing
+      - Task 11: Update sprint-status.yaml (drafted status)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Given editing server with unsaved changes, When click Cancel, Then all fields revert to original values
+    AC2: Form is no longer marked as "dirty" after Cancel
+    AC3: No save request is made to backend (client-side only)
+    AC4: If in "Add Server" mode, form clears and shows empty state
+    AC5: No confirmation dialog is shown (Cancel is safe, non-destructive)
+    AC6: Unsaved changes indicator in panel header disappears (amber "Unsaved" dot/text)
+    AC7: Keyboard accessibility maintained (Escape key can also trigger cancel)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown - Epic 2: Server Management</title>
+        <section>Story 2.10</section>
+        <snippet>Cancel button reverts form to original values without confirmation. If in add mode, clears form and shows empty state. No API call needed - client-side only.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>Overview and Detailed Design</section>
+        <snippet>ServerForm component uses React hooks for state management. PanelHeader includes Cancel button with onCancel callback. Form dirty state tracked via initialData comparison using JSON.stringify.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Confirmation Patterns</section>
+        <snippet>Cancel is a safe action that never destroys backend data. No confirmation dialog needed because user explicitly chose to discard local draft changes.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>8.2 Keyboard Navigation</section>
+        <snippet>Escape key should trigger Cancel when form is dirty. WCAG 2.1 AA compliance requires keyboard-only users have equivalent functionality to mouse users.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Frontend Architecture</section>
+        <snippet>React 18 with TypeScript, Vite build tool. Component-based architecture with shadcn/ui components. State managed via React hooks (useState, useEffect, useMemo, useRef).</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR64, FR65</section>
+        <snippet>FR64: User can cancel out of edit form without saving changes. FR65: User can discard unsaved changes when prompted.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/2-9-implement-unsaved-changes-warning.md</path>
+        <title>Story 2.9 - Implement Unsaved Changes Warning</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Story 2.9 already implemented handleCancelEdit function and dirty state tracking using initialData state pattern. Cancel button exists at MainPanel and correctly resets formData to initialData. isDirty computed via useMemo with JSON.stringify comparison.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>handleCancel</symbol>
+        <lines>299-307</lines>
+        <reason>Existing Cancel button handler - reverts formData to initialData and shows toast. Story 2.10 needs to verify this works correctly and potentially add add mode handling.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>initialData state</symbol>
+        <lines>77-81</lines>
+        <reason>State that stores original loaded server data for dirty tracking. Used by Cancel to revert changes.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>isDirty useMemo</symbol>
+        <lines>109-112</lines>
+        <reason>Computed dirty state using JSON.stringify comparison. Automatically becomes false when formData equals initialData after Cancel.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>selectedServerId</symbol>
+        <lines>68-70</lines>
+        <reason>Tracks current selection. Value '__ADD_MODE__' indicates add mode. Cancel needs to check this to determine whether to clear form (add mode) or revert (edit mode).</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>showUnsavedDialog</symbol>
+        <lines>96-97</lines>
+        <reason>Controls unsaved changes warning dialog. Escape key handler must check this to avoid conflict with dialog's Escape handler.</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>13-56</lines>
+        <reason>Renders Cancel button and unsaved indicator. isDirty prop controls amber "Unsaved" dot/text visibility (lines 27-32). Cancel button triggers onCancel callback (line 40).</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/toast.tsx</path>
+        <kind>component</kind>
+        <symbol>toast</symbol>
+        <lines>1-50</lines>
+        <reason>shadcn/ui toast component used by Cancel handler to show "Changes discarded" notification.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="react-router-dom" version="^7.9.6" />
+        <package name="@radix-ui/react-toast" version="^1.2.15" reason="Toast notifications for Cancel feedback" />
+        <package name="@radix-ui/react-dialog" version="^1.1.15" reason="Used by unsaved changes warning (Story 2.9)" />
+        <package name="lucide-react" version="^0.554.0" reason="Icons for UI components" />
+        <package name="typescript" version="^5.2.2" />
+        <package name="tailwindcss" version="^3.4.3" />
+      </frontend>
+      <backend>
+        <none>Cancel is purely client-side - no backend dependencies</none>
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Cancel MUST NOT make API calls (purely client-side state reset)
+    - Cancel MUST NOT show confirmation dialog (safe, non-destructive action per UX spec)
+    - Must maintain compatibility with Story 2.9's unsaved changes warning (no conflicts)
+    - Escape key handler must NOT trigger when unsaved changes dialog is open (prevent conflict)
+    - Add mode Cancel must clear selectedServerId and return to empty state
+    - Edit mode Cancel must revert to initialData without navigation
+    - Dirty indicator must disappear immediately after Cancel (isDirty becomes false)
+    - Must work with all form field types: text inputs, checkboxes, SNMP config arrays, NetApp config arrays
+    - WCAG 2.1 AA keyboard accessibility compliance (Escape key support)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>PanelHeaderProps.onCancel</name>
+      <kind>React callback prop</kind>
+      <signature>onCancel: () => void</signature>
+      <path>src/components/config/PanelHeader.tsx:6</path>
+      <usage>MainPanel passes handleCancel function to PanelHeader's onCancel prop</usage>
+    </interface>
+    <interface>
+      <name>PanelHeaderProps.isDirty</name>
+      <kind>React prop</kind>
+      <signature>isDirty?: boolean</signature>
+      <path>src/components/config/PanelHeader.tsx:8</path>
+      <usage>Controls visibility of amber "Unsaved" indicator in panel header</usage>
+    </interface>
+    <interface>
+      <name>MainPanelProps.onNavigationRequest</name>
+      <kind>React callback prop</kind>
+      <signature>onNavigationRequest?: (targetId: string, type: 'server' | 'group' | 'add-server') => void</signature>
+      <path>src/components/config/MainPanel.tsx:49</path>
+      <usage>Used by unsaved changes dialog to navigate back (Story 2.9). Cancel should NOT trigger this.</usage>
+    </interface>
+    <interface>
+      <name>toast</name>
+      <kind>function</kind>
+      <signature>toast({ title: string, description?: string }): void</signature>
+      <path>src/components/ui/toast.tsx</path>
+      <usage>Cancel handler calls toast to show "Changes discarded" notification</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      No formal testing framework configured. Manual testing documented in story Tasks section. TypeScript compilation ensures type safety. Build command `npm run build` verifies zero errors.
+    </standards>
+    <locations>
+      Manual testing performed in browser:
+      - http://localhost:5173/config (frontend dev server)
+      - Browser DevTools Network tab for API call verification
+      - Browser DevTools Console for error checking
+    </locations>
+    <ideas>
+      - Test Idea 1 (AC1, AC2, AC3): Edit server name, click Cancel, verify revert + no API call
+      - Test Idea 2 (AC1): Edit multiple fields (name, IP, DNS), click Cancel, verify all revert
+      - Test Idea 3 (AC1): Edit SNMP config (add disks), click Cancel, verify SNMP reverts
+      - Test Idea 4 (AC1): Edit NetApp config (add LUNs), click Cancel, verify NetApp reverts
+      - Test Idea 5 (AC4): Add Server mode with filled fields, click Cancel, verify empty state
+      - Test Idea 6 (AC4): Add Server mode empty form, click Cancel, verify no crash
+      - Test Idea 7 (AC5): Make changes, click Cancel, verify NO confirmation dialog appears
+      - Test Idea 8 (AC6): Make changes (Unsaved appears), click Cancel, verify indicator disappears
+      - Test Idea 9 (AC7): Make changes, press Escape key, verify same behavior as Cancel button
+      - Test Idea 10 (AC7): Open unsaved dialog, press Escape, verify dialog closes (not form cancel)
+      - Test Idea 11 (Integration): Edit → navigate → dialog cancel → form cancel → navigate → no dialog
+      - Test Idea 12 (Edge case): Make invalid changes, click Cancel, verify valid data restored
+      - Test Idea 13 (Edge case): Edit Server A, Cancel, edit Server B, verify no contamination
+    </ideas>
+  </tests>
+</story-context>

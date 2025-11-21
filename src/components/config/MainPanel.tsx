@@ -297,14 +297,55 @@ export function MainPanel({
   };
 
   const handleCancel = () => {
-    // Revert to initial data
-    setFormData(initialData);
+    if (isAddMode) {
+      // Add mode: clear selection and return to empty state
+      if (onNavigationRequest) {
+        skipUnsavedCheck.current = true; // Don't show unsaved dialog when canceling add
+        // Pass empty string to trigger deselection in handleSelectServer (which accepts string | null)
+        onNavigationRequest('', 'server');
+      }
 
-    toast({
-      title: 'Changes discarded',
-      description: 'Form reset to last saved state',
-    });
+      toast({
+        title: 'Add canceled',
+        description: 'New server creation canceled',
+      });
+    } else {
+      // Edit mode: revert to original values
+      setFormData(initialData);
+
+      toast({
+        title: 'Changes discarded',
+        description: 'Form reset to last saved state',
+      });
+    }
   };
+
+  // Escape key handler to trigger Cancel (AC #7 - keyboard accessibility)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only trigger Cancel if:
+      // 1. Escape key was pressed
+      // 2. Form has unsaved changes (isDirty)
+      // 3. No dialogs are open (Escape should close dialog, not cancel form)
+      // 4. A form is active (add or edit mode)
+      if (
+        event.key === 'Escape' &&
+        isDirty &&
+        !showUnsavedDialog &&
+        !showDeleteDialog &&
+        (isAddMode || isEditMode)
+      ) {
+        event.preventDefault();
+        handleCancel();
+      }
+    };
+
+    // Add event listener to window
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup on unmount
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDirty, showUnsavedDialog, showDeleteDialog, isAddMode, isEditMode, handleCancel]);
 
   // Delete button click handler - opens confirmation dialog
   const handleDeleteClick = () => {
