@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Story Context: 2.9 - Implement Unsaved Changes Warning -->
+<!-- Generated: 2025-11-21 -->
+<!-- Status: ready-for-dev -->
+
+<story-context>
+  <meta>
+    <story-id>2.9</story-id>
+    <story-key>2-9-implement-unsaved-changes-warning</story-key>
+    <epic-id>2</epic-id>
+    <title>Implement Unsaved Changes Warning</title>
+    <status>ready-for-dev</status>
+  </meta>
+
+  <story>
+    <as-a>user</as-a>
+    <i-want>to be warned when navigating away with unsaved changes</i-want>
+    <so-that>I don't accidentally lose my work</so-that>
+  </story>
+
+  <acceptance-criteria>
+    <criterion id="AC1">
+      Given I am editing a server and have made changes to any field (form is "dirty")
+      When I click another server in the sidebar
+      Then a confirmation dialog appears blocking the navigation
+    </criterion>
+    <criterion id="AC2">
+      And the dialog displays:
+      - Title: "Unsaved Changes"
+      - Message: "You have unsaved changes. What would you like to do?"
+      - Three buttons: [Discard Changes] [Cancel] [Save &amp; Continue]
+    </criterion>
+    <criterion id="AC3">
+      And when I click "Discard Changes":
+      - Dialog closes
+      - Unsaved changes are abandoned
+      - New server loads in the form with its data
+    </criterion>
+    <criterion id="AC4">
+      And when I click "Cancel":
+      - Dialog closes
+      - I remain on the current server (no navigation)
+      - Unsaved changes are preserved
+      - I can continue editing
+    </criterion>
+    <criterion id="AC5">
+      And when I click "Save &amp; Continue":
+      - Dialog stays open with loading indicator on button
+      - Current server is saved via PUT /api/config/servers/:id
+      - If save succeeds: Dialog closes, new server loads
+      - If save fails: Dialog closes, error toast shown, navigation blocked (stay on current server)
+    </criterion>
+    <criterion id="AC6">
+      And the form tracks "dirty" state by comparing current field values to original loaded values
+    </criterion>
+    <criterion id="AC7">
+      And dirty state is set to false when:
+      - Form is saved successfully
+      - User clicks Cancel button (reverts to original values)
+      - User clicks Discard Changes in unsaved dialog
+    </criterion>
+    <criterion id="AC8">
+      And dirty state is set to true when:
+      - Any field value differs from the original loaded value
+      - User types in text inputs
+      - User toggles checkboxes
+      - User changes select dropdowns
+      - User adds/removes items in SNMP/NetApp dynamic lists
+    </criterion>
+    <criterion id="AC9">
+      And the panel header shows a visual indicator when form is dirty:
+      - Dot (•) or text "Unsaved" appears near the title
+      - Indicator is gray or amber color (#fbbf24)
+      - Indicator disappears when dirty state becomes false
+    </criterion>
+    <criterion id="AC10">
+      And when I click "Add Server" button with unsaved changes, the same warning dialog appears before clearing the form
+    </criterion>
+    <criterion id="AC11">
+      And when I click a group in the sidebar with unsaved changes, the same warning dialog appears before switching to group form
+    </criterion>
+    <criterion id="AC12">
+      And the warning does NOT appear when:
+      - Switching servers when form is pristine (no changes)
+      - Current selection is add mode with empty form (nothing to lose)
+      - After saving successfully (form is clean)
+      - After explicitly canceling (user already abandoned changes)
+    </criterion>
+    <criterion id="AC13">
+      And keyboard navigation is fully supported:
+      - Escape closes dialog (same as Cancel)
+      - Tab cycles through all three buttons
+      - Enter activates the focused button
+    </criterion>
+  </acceptance-criteria>
+
+  <tasks>
+    <task id="T1" acs="AC6,AC7,AC8">Implement form dirty state tracking in MainPanel</task>
+    <task id="T2" acs="AC9">Add dirty indicator to PanelHeader</task>
+    <task id="T3" acs="AC1,AC2">Create unsaved changes confirmation dialog state</task>
+    <task id="T4" acs="AC3,AC4,AC5">Create dialog action handlers</task>
+    <task id="T5" acs="AC2,AC13">Build unsaved changes confirmation dialog UI</task>
+    <task id="T6" acs="AC1,AC10,AC11">Intercept navigation attempts from sidebar clicks</task>
+    <task id="T7" acs="AC12">Handle edge cases for unsaved warning</task>
+    <task id="T8" acs="AC8">Integrate with existing form field change handlers</task>
+    <task id="T9" acs="AC9">Update PanelHeader in MainPanel to pass isDirty prop</task>
+    <task id="T10" acs="ALL">Test unsaved changes warning end-to-end</task>
+    <task id="T11">Update sprint-status.yaml (internal tracking)</task>
+  </tasks>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR63: System warns user about unsaved changes</section>
+        <snippet>System warns user about unsaved changes when switching to another server/group. User can cancel out of edit form without saving changes. User can discard unsaved changes when prompted.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Component Architecture - Frontend Component Hierarchy</section>
+        <snippet>ConfigPage contains ConfigLayout with Sidebar and MainPanel. MainPanel handles server form editing with PanelHeader, ServerForm components. Form state management using React state hooks.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 2.9: Implement Unsaved Changes Warning</section>
+        <snippet>Warn users when navigating away with unsaved changes. Dialog with three options: Discard, Cancel, Save &amp; Continue. Track dirty state by comparing form values. Show visual indicator in header.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Form Patterns - Dirty State Tracking</section>
+        <snippet>Forms track dirty state by comparing current values to original loaded values. Visual indicator (amber "Unsaved" text) appears when form is dirty. Confirmation required before navigating away from dirty forms.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>7.1 Confirmation Patterns - Multiple Outcomes</section>
+        <snippet>Three-button confirmation dialogs for complex decisions. Destructive action on left (Discard), neutral in middle (Cancel), primary on right (Save). Button hierarchy follows visual importance.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>8.2 Keyboard Navigation</section>
+        <snippet>Dialog keyboard support: Escape closes dialog, Tab cycles buttons, Enter activates focused button. Focus returns to trigger element after dialog closes. Auto-focus on primary action button.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>51-300</lines>
+        <reason>Main form container that needs dirty state tracking, unsaved dialog state, and navigation interception handlers. Already has formData, initialData states and delete confirmation dialog pattern to reuse.</reason>
+      </file>
+      <file>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>function</kind>
+        <symbol>createEmptyServerConfig</symbol>
+        <lines>22-41</lines>
+        <reason>Helper to create empty server template. Needed for comparing against empty form in add mode to determine if user has entered data.</reason>
+      </file>
+      <file>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>1-52</lines>
+        <reason>Header component that displays form title and action buttons. Already has isDirty prop defined (line 8) but not yet used in visual indicator. Needs to display amber "Unsaved" indicator when isDirty is true.</reason>
+      </file>
+      <file>
+        <path>src/components/config/Sidebar.tsx</path>
+        <kind>component</kind>
+        <symbol>Sidebar</symbol>
+        <reason>Sidebar component that renders server and group lists. Navigation handlers (onClick events) need to be intercepted to check dirty state before allowing navigation.</reason>
+      </file>
+      <file>
+        <path>src/components/ui/dialog.tsx</path>
+        <kind>component</kind>
+        <symbol>Dialog</symbol>
+        <reason>shadcn/ui Dialog component already installed and used in MainPanel for delete confirmation. Reuse same Dialog pattern for unsaved changes warning.</reason>
+      </file>
+      <file>
+        <path>src/services/api.ts</path>
+        <kind>service</kind>
+        <symbol>configApi.updateServer</symbol>
+        <reason>API method for saving server changes. Used in "Save &amp; Continue" action to persist changes before navigation.</reason>
+      </file>
+      <file>
+        <path>src/services/api.ts</path>
+        <kind>service</kind>
+        <symbol>configApi.createServer</symbol>
+        <reason>API method for creating new server. Used in "Save &amp; Continue" when in add mode.</reason>
+      </file>
+      <file>
+        <path>src/hooks/use-toast.ts</path>
+        <kind>hook</kind>
+        <symbol>useToast</symbol>
+        <reason>Toast notification hook for success/error feedback. Used to show save success/failure messages in "Save &amp; Continue" action.</reason>
+      </file>
+      <file>
+        <path>src/types/server.ts</path>
+        <kind>types</kind>
+        <symbol>ServerConfig</symbol>
+        <reason>TypeScript interface for server configuration. Used for type safety in form data comparison and dirty state tracking.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <ecosystem name="npm">
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="react-router-dom" version="^7.9.6" />
+        <package name="@radix-ui/react-dialog" version="^1.1.15" />
+        <package name="@radix-ui/react-toast" version="^1.2.15" />
+        <package name="lucide-react" version="^0.554.0" />
+        <package name="typescript" version="^5.2.2" />
+        <package name="tailwindcss" version="^3.4.3" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>MainPanel props</name>
+      <kind>React component props</kind>
+      <signature>
+        interface MainPanelProps {
+          selectedServerId: string | null;
+          selectedGroupId: string | null;
+          selectedServerName?: string | null;
+          selectedServer?: ServerConfig | null;
+        }
+      </signature>
+      <path>src/components/config/MainPanel.tsx:43-49</path>
+    </interface>
+    <interface>
+      <name>PanelHeader props</name>
+      <kind>React component props</kind>
+      <signature>
+        interface PanelHeaderProps {
+          title: string;
+          onDelete?: () => void;
+          onCancel: () => void;
+          onSave: () => void;
+          isDirty?: boolean;  // Already defined, needs implementation
+          hasErrors?: boolean;
+          isLoading?: boolean;
+        }
+      </signature>
+      <path>src/components/config/PanelHeader.tsx:3-11</path>
+    </interface>
+    <interface>
+      <name>configApi.updateServer</name>
+      <kind>API method</kind>
+      <signature>async updateServer(id: string, data: Partial&lt;ServerConfig&gt;): Promise&lt;ServerConfig&gt;</signature>
+      <path>src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>configApi.createServer</name>
+      <kind>API method</kind>
+      <signature>async createServer(data: Partial&lt;ServerConfig&gt;): Promise&lt;ServerConfig&gt;</signature>
+      <path>src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>Dialog component (shadcn/ui)</name>
+      <kind>React component</kind>
+      <signature>
+        Dialog: open, onOpenChange
+        DialogContent: children
+        DialogHeader: children
+        DialogTitle: children
+        DialogDescription: children
+        DialogFooter: children
+      </signature>
+      <path>src/components/ui/dialog.tsx</path>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint>
+      <type>Pattern</type>
+      <rule>Reuse existing Dialog pattern from delete confirmation (Story 2.8)</rule>
+      <rationale>Consistency with existing confirmation dialogs, proven pattern</rationale>
+    </constraint>
+    <constraint>
+      <type>State Management</type>
+      <rule>Use React useState hooks for dirty state tracking - no external state management library</rule>
+      <rationale>Consistent with existing component patterns in MainPanel</rationale>
+    </constraint>
+    <constraint>
+      <type>Dirty Detection</type>
+      <rule>Use JSON.stringify comparison for deep equality check of form data</rule>
+      <rationale>Simple, handles nested objects (SNMP/NetApp config), sufficient performance for form-sized data</rationale>
+    </constraint>
+    <constraint>
+      <type>Navigation Interception</type>
+      <rule>Wrap all sidebar navigation handlers with dirty check before allowing navigation</rule>
+      <rationale>Centralized dirty check ensures all navigation paths are protected</rationale>
+    </constraint>
+    <constraint>
+      <type>Visual Design</type>
+      <rule>Use amber color (#fbbf24 text, #d97706 dot) for "Unsaved" indicator to match UX spec</rule>
+      <rationale>Warning color without being alarming, distinguishes from success/error states</rationale>
+    </constraint>
+    <constraint>
+      <type>Button Hierarchy</type>
+      <rule>Three-button layout: Destructive (Discard) | Secondary (Cancel) | Primary (Save)</rule>
+      <rationale>Follows established confirmation dialog pattern from Story 2.8</rationale>
+    </constraint>
+    <constraint>
+      <type>Keyboard Accessibility</type>
+      <rule>Dialog must support Escape key (close), Tab key (cycle buttons), Enter key (activate)</rule>
+      <rationale>WCAG AA accessibility requirement, consistent with existing dialog behavior</rationale>
+    </constraint>
+    <constraint>
+      <type>Edge Cases</type>
+      <rule>No warning for: pristine form, empty add mode, after successful save, after explicit cancel</rule>
+      <rationale>Only warn when user has actual work to lose</rationale>
+    </constraint>
+    <constraint>
+      <type>Toast Notifications</type>
+      <rule>Success toast: 3s auto-dismiss, Error toast: manual dismiss (Infinity duration)</rule>
+      <rationale>Established pattern from Stories 2.6, 2.7, 2.8</rationale>
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      No formal testing framework currently implemented in project. Manual testing required.
+      Frontend uses Vite for building, TypeScript for type checking.
+      Test verification: npm run build (zero TypeScript errors expected).
+    </standards>
+
+    <locations>
+      - No test directories currently exist
+      - Future: src/__tests__/ or src/components/__tests__/
+    </locations>
+
+    <ideas>
+      <test-idea ac="AC1,AC2,AC3">
+        Test dirty state detection: Edit server name, click another server, verify dialog appears with three buttons, click Discard, verify new server loads
+      </test-idea>
+      <test-idea ac="AC4">
+        Test cancel behavior: Make changes, trigger dialog, click Cancel, verify stays on current server with changes preserved
+      </test-idea>
+      <test-idea ac="AC5">
+        Test Save &amp; Continue success: Make valid changes, trigger dialog, click Save &amp; Continue, verify save succeeds and navigates to new server
+      </test-idea>
+      <test-idea ac="AC5">
+        Test Save &amp; Continue failure: Make changes, stop backend, trigger dialog, click Save &amp; Continue, verify error toast and no navigation
+      </test-idea>
+      <test-idea ac="AC6,AC7,AC8">
+        Test dirty state lifecycle: Verify isDirty set to true on field change, false after save, false after cancel, false after discard
+      </test-idea>
+      <test-idea ac="AC9">
+        Test visual indicator: Verify "Unsaved" indicator appears when dirty, disappears when clean
+      </test-idea>
+      <test-idea ac="AC10">
+        Test Add Server button: Edit server, click Add Server, verify warning appears
+      </test-idea>
+      <test-idea ac="AC12">
+        Test no warning scenarios: Pristine form navigation, empty add mode, post-save navigation, post-cancel navigation
+      </test-idea>
+      <test-idea ac="AC13">
+        Test keyboard navigation: Escape closes, Tab cycles buttons, Enter activates focused button
+      </test-idea>
+    </ideas>
+  </tests>
+
+  <previous-story-learnings>
+    <source>docs/sprint-artifacts/2-8-implement-delete-server-with-confirmation-dialog.md</source>
+    <learning>
+      Dialog component (shadcn/ui) already installed and working from Story 2.8.
+      Pattern: Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter with three button layout.
+      Reuse exact same pattern for unsaved changes warning.
+    </learning>
+    <learning>
+      PanelHeader already has isDirty prop defined (line 8) but not yet implemented visually.
+      Story 2.9 just needs to add the visual indicator JSX when isDirty is true.
+    </learning>
+    <learning>
+      MainPanel already has initialData state for dirty tracking (line 74-81).
+      Story 2.9 can use existing pattern of comparing formData to initialData.
+    </learning>
+    <learning>
+      Toast notification pattern established: useToast hook, success (3s auto-dismiss), error (manual dismiss).
+      Apply same pattern for "Save &amp; Continue" feedback.
+    </learning>
+    <learning>
+      Mode detection pattern: isAddMode = selectedServerId === '__ADD_MODE__'.
+      Use this to determine if warning should appear (only if form has data in add mode).
+    </learning>
+    <learning>
+      Delete confirmation dialog pattern (Story 2.8): State for showDialog, handlers for open/cancel/confirm.
+      Reuse exact same pattern for unsaved changes dialog.
+    </learning>
+  </previous-story-learnings>
+
+  <technical-notes>
+    <note>
+      <title>Dirty State Detection Implementation</title>
+      <content>
+        Use JSON.stringify(formData) !== JSON.stringify(initialData) for dirty check.
+        Alternative considered: lodash.isEqual (not needed, adds dependency).
+        Performance: JSON.stringify on ~500 byte objects is &lt;0.1ms per keystroke (acceptable).
+        Edge case: JSON.stringify may not handle function properties, but ServerConfig has no functions.
+      </content>
+    </note>
+    <note>
+      <title>Navigation Interception Strategy</title>
+      <content>
+        Create handleNavigationAttempt(targetId) wrapper function.
+        Replace all direct setSelectedServerId calls in Sidebar with handleNavigationAttempt.
+        If dirty: setPendingNavigation(targetId), show dialog.
+        If clean: proceed with navigation immediately.
+        After dialog action: use pendingNavigation to complete deferred navigation.
+      </content>
+    </note>
+    <note>
+      <title>Save &amp; Continue Error Handling</title>
+      <content>
+        If save fails during "Save &amp; Continue":
+        1. Close dialog immediately
+        2. Show error toast (manual dismiss)
+        3. Do NOT navigate (stay on current server)
+        4. Form remains dirty (user can fix errors and retry)
+        5. Clear pendingNavigation (user must re-trigger navigation)
+        Rationale: Better to stay put with error than lose context of what failed.
+      </content>
+    </note>
+    <note>
+      <title>Add Mode Empty Form Detection</title>
+      <content>
+        Compare formData to createEmptyServerConfig() output to detect if user has typed anything.
+        Warning should appear if: isAddMode AND formData !== emptyTemplate.
+        No warning if: isAddMode AND formData === emptyTemplate (nothing to lose).
+      </content>
+    </note>
+    <note>
+      <title>PanelHeader Visual Indicator</title>
+      <content>
+        Current implementation (line 27): {isDirty &amp;&amp; &lt;span className="ml-2 text-sm text-gray-500"&gt;(unsaved)&lt;/span&gt;}
+        Story 2.9 requirements: Amber color, dot + "Unsaved" text.
+        Replace with: &lt;span className="flex items-center gap-1.5 text-sm text-amber-600"&gt;&lt;span className="h-2 w-2 rounded-full bg-amber-600"&gt;&lt;/span&gt;&lt;span&gt;Unsaved&lt;/span&gt;&lt;/span&gt;
+      </content>
+    </note>
+  </technical-notes>
+
+  <related-stories>
+    <story id="2.6" status="done">
+      <title>Implement Save Server Functionality with Backend API</title>
+      <relationship>Established toast notification pattern and save server API usage</relationship>
+    </story>
+    <story id="2.7" status="done">
+      <title>Implement Add New Server Workflow</title>
+      <relationship>Established add mode pattern (__ADD_MODE__) and createEmptyServerConfig helper</relationship>
+    </story>
+    <story id="2.8" status="done">
+      <title>Implement Delete Server with Confirmation Dialog</title>
+      <relationship>Established Dialog component pattern with three-button layout - reuse for unsaved warning</relationship>
+    </story>
+    <story id="2.10" status="backlog">
+      <title>Implement Cancel Button Behavior</title>
+      <relationship>Cancel button resets formData to initialData, setting isDirty to false</relationship>
+    </story>
+  </related-stories>
+</story-context>

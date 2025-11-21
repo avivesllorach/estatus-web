@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ConfigLayout } from '../components/config/ConfigLayout';
 import { Sidebar } from '../components/config/Sidebar';
 import { MainPanel } from '../components/config/MainPanel';
@@ -14,6 +14,9 @@ export function ConfigPage() {
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedServerConfig, setSelectedServerConfig] = useState<ServerConfig | null>(null);
+
+  // Ref to track if we should bypass navigation check (for completing pending navigation)
+  const bypassNavigationCheck = useRef(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,6 +73,24 @@ export function ConfigPage() {
     fetchServerConfig();
   }, [selectedServerId]);
 
+  // Navigation request handler - called from MainPanel when navigation should proceed
+  const handleNavigationRequest = (targetId: string, type: 'server' | 'group' | 'add-server') => {
+    bypassNavigationCheck.current = true;
+
+    if (type === 'server') {
+      handleSelectServer(targetId);
+    } else if (type === 'group') {
+      handleSelectGroup(targetId);
+    } else if (type === 'add-server') {
+      handleAddServerClick();
+    }
+
+    // Reset bypass flag after navigation
+    setTimeout(() => {
+      bypassNavigationCheck.current = false;
+    }, 100);
+  };
+
   const handleSelectServer = (id: string) => {
     setSelectedServerId(id);
     setSelectedGroupId(null); // Clear group selection
@@ -119,6 +140,7 @@ export function ConfigPage() {
         selectedGroupId={selectedGroupId}
         selectedServerName={selectedServerName}
         selectedServer={selectedServerConfig}
+        onNavigationRequest={handleNavigationRequest}
       >
         <p className="text-gray-600">Select a server or group from the sidebar to configure.</p>
       </MainPanel>

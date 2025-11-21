@@ -55,7 +55,7 @@ development_status:
   2-6-implement-save-server-functionality-with-backend-api: done
   2-7-implement-add-new-server-workflow: done
   2-8-implement-delete-server-with-confirmation-dialog: done
-  2-9-implement-unsaved-changes-warning: backlog
+  2-9-implement-unsaved-changes-warning: review
   2-10-implement-cancel-button-behavior: backlog
   epic-2-retrospective: optional
 

@@ -46,13 +46,16 @@ interface MainPanelProps {
   selectedServerName?: string | null;
   selectedServer?: ServerConfig | null;
   children?: ReactNode;
+  onNavigationRequest?: (targetId: string, type: 'server' | 'group' | 'add-server') => void;
+  onDirtyStateChange?: (isDirty: boolean) => void;
 }
 
 export function MainPanel({
   selectedServerId,
   selectedGroupId,
   selectedServerName,
-  selectedServer
+  selectedServer,
+  onNavigationRequest
 }: MainPanelProps) {
   const { toast } = useToast();
 
@@ -89,11 +92,50 @@ export function MainPanel({
   // Delete confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Unsaved changes confirmation dialog state
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+
   // Ref for auto-focus on Server ID field in add mode
   const serverIdInputRef = useRef<HTMLInputElement>(null);
 
-  // Update form data and initialData when mode or selected server changes
+  // Track if we should skip showing unsaved dialog (after user makes a choice)
+  const skipUnsavedCheck = useRef(false);
+
+  // Track previous selectedServerId to detect navigation attempts
+  const previousServerId = useRef(selectedServerId);
+
+  // Compute dirty state (has unsaved changes) - MUST be before useEffect that uses it
+  const isDirty = useMemo(() => {
+    if (!initialData || !formData) return false;
+    return JSON.stringify(initialData) !== JSON.stringify(formData);
+  }, [initialData, formData]);
+
+  // Detect navigation attempt and show unsaved warning if needed
   useEffect(() => {
+    const prev = previousServerId.current;
+    const current = selectedServerId;
+
+    // Check if selectedServerId is changing (navigation attempt)
+    if (prev !== current && prev !== null && !skipUnsavedCheck.current) {
+      // Navigation is being attempted from a previously loaded form
+      if (isDirty && formData) {
+        // Form is dirty, show warning
+        const navType = current === '__ADD_MODE__' ? 'add-server' :
+                       current?.startsWith('group-') ? 'group' : 'server';
+        setPendingNavigation(`${prev}:${navType}`); // Store PREVIOUS id to go back if canceled
+        setShowUnsavedDialog(true);
+        // Note: We continue loading the new form, but user can cancel back
+      }
+    }
+
+    // Reset skip flag
+    skipUnsavedCheck.current = false;
+
+    // Update previousServerId for next comparison
+    previousServerId.current = current;
+
+    // Proceed with loading new data
     if (isAddMode) {
       // Add mode: clear form with empty template
       const emptyData = createEmptyServerConfig();
@@ -113,7 +155,7 @@ export function MainPanel({
       setFormData(serverData);
       setInitialData(serverData);
     }
-  }, [isAddMode, selectedServer?.id]);
+  }, [isAddMode, selectedServer?.id, selectedServerId, isDirty, formData]);
 
   // Auto-focus Server ID field when entering add mode
   useEffect(() => {
@@ -121,12 +163,6 @@ export function MainPanel({
       serverIdInputRef.current.focus();
     }
   }, [isAddMode]);
-
-  // Compute dirty state (has unsaved changes)
-  const isDirty = useMemo(() => {
-    if (!initialData || !formData) return false;
-    return JSON.stringify(initialData) !== JSON.stringify(formData);
-  }, [initialData, formData]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -312,6 +348,83 @@ export function MainPanel({
     }
   };
 
+  // Unsaved changes dialog handlers
+  const handleDiscardChanges = () => {
+    setShowUnsavedDialog(false);
+
+    toast({
+      title: 'Changes discarded',
+      description: 'Unsaved changes have been discarded',
+      duration: 2000,
+    });
+
+    // Allow navigation to proceed (already happened, we just accept it)
+    skipUnsavedCheck.current = true;
+    setPendingNavigation(null);
+  };
+
+  const handleCancelDialog = () => {
+    setShowUnsavedDialog(false);
+
+    // Navigate BACK to the previous server (undo the navigation)
+    if (pendingNavigation && onNavigationRequest) {
+      const [prevId, type] = pendingNavigation.split(':') as [string, 'server' | 'group' | 'add-server'];
+      skipUnsavedCheck.current = true; // Don't show dialog again for this navigation
+      onNavigationRequest(prevId, type);
+    }
+    setPendingNavigation(null);
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (!formData) return;
+
+    setIsLoading(true);
+
+    try {
+      // Determine which server ID to use for saving (the PREVIOUS one before navigation)
+      const serverIdToSave = pendingNavigation ? pendingNavigation.split(':')[0] : selectedServerId;
+
+      // Save current server
+      if (serverIdToSave === '__ADD_MODE__') {
+        await configApi.createServer(formData as any);
+      } else if (serverIdToSave) {
+        await configApi.updateServer(serverIdToSave, formData as any);
+      }
+
+      // Success
+      toast({
+        title: 'Server saved successfully',
+        description: `${formData.name} has been saved`,
+        duration: 3000,
+      });
+
+      setShowUnsavedDialog(false);
+
+      // Allow navigation to proceed (it already happened, we saved and accept it)
+      skipUnsavedCheck.current = true;
+      setPendingNavigation(null);
+    } catch (error) {
+      // Save failed - navigate back to previous server
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save server',
+        description: error instanceof Error ? error.message : 'Save operation failed',
+        duration: Infinity,
+      });
+      setShowUnsavedDialog(false);
+
+      // Navigate back to previous server since save failed
+      if (pendingNavigation && onNavigationRequest) {
+        const [prevId, type] = pendingNavigation.split(':') as [string, 'server' | 'group' | 'add-server'];
+        skipUnsavedCheck.current = true;
+        onNavigationRequest(prevId, type);
+      }
+      setPendingNavigation(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check if any validation errors exist
   const hasErrors = Object.values(validationErrors).some(error => error !== null);
 
@@ -381,6 +494,38 @@ export function MainPanel({
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Unsaved Changes Confirmation Dialog */}
+        <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Unsaved Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes. What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleDiscardChanges}
+              >
+                Discard Changes
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleCancelDialog}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveAndContinue}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save & Continue'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

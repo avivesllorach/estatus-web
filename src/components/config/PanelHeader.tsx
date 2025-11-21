@@ -22,10 +22,15 @@ export function PanelHeader({
   return (
     <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {title}
-          {isDirty && <span className="ml-2 text-sm text-gray-500">(unsaved)</span>}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          {isDirty && (
+            <span className="flex items-center gap-1.5 text-sm text-amber-600">
+              <span className="h-2 w-2 rounded-full bg-amber-600"></span>
+              <span className="font-medium">Unsaved</span>
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           {onDelete && (
             <Button variant="destructive" size="sm" onClick={onDelete}>
