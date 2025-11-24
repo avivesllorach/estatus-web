@@ -64,9 +64,9 @@ development_status:
   3-2-build-server-assignment-interface: done
   3-3-implement-group-display-order-controls: done
   3-4-implement-save-group-functionality-with-backend-api: done
-  3-5-implement-add-new-group-workflow: backlog
-  3-6-implement-delete-group-with-server-reassignment: backlog
-  3-7-implement-group-name-validation: backlog
+  3-5-implement-add-new-group-workflow: done
+  3-6-implement-delete-group-with-server-reassignment: done
+  3-7-implement-group-name-validation: done
   epic-3-retrospective: optional
 
   epic-4: backlog

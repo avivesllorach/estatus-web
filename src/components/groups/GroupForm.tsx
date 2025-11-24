@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { PanelHeader } from '@/components/config/PanelHeader';
 import { FormSection } from '@/components/config/forms/shared/FormSection';
 import { FormGroup } from '@/components/config/forms/shared/FormGroup';
@@ -6,12 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { GroupConfig } from '@/types/group';
 import { ServerData, configApi } from '@/services/api';
 import { Search, Filter, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
+
+// Type definition for group deletion reassignment strategies
+type ReassignStrategy = 'unassign' | 'default';
 
 interface GroupFormProps {
   groupId: string | null;
@@ -144,6 +149,10 @@ export function GroupForm({
   const [onlineServersOpen, setOnlineServersOpen] = useState(true);
   const [offlineServersOpen, setOfflineServersOpen] = useState(true);
 
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reassignStrategy, setReassignStrategy] = useState<ReassignStrategy>('unassign');
+
   // Compute dirty state (has unsaved changes)
   const isDirty = useMemo(() => {
     if (!initialData || !formData) return false;
@@ -223,14 +232,32 @@ export function GroupForm({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleSelectAll, handleDeselectAll]);
 
+  // Calculate next available display order for add mode
+  const getNextAvailableOrder = useCallback(() => {
+    if (groups.length === 0) return 1;
+    const maxOrder = Math.max(...groups.map(g => g.order));
+    return Math.min(maxOrder + 1, 100); // Cap at 100 as per validation
+  }, [groups]);
+
+  // Ref for auto-focus on Group Name field in add mode
+  const groupNameInputRef = useRef<HTMLInputElement>(null);
+
   // Load data when group changes
   useEffect(() => {
     if (isAddMode) {
-      // Add mode: clear form with empty template
+      // Add mode: clear form with empty template and set default order
       const emptyData = createEmptyGroupConfig();
+      emptyData.order = getNextAvailableOrder();
       setFormData(emptyData);
       setInitialData(emptyData);
       setValidationErrors({});
+
+      // Auto-focus Group Name field
+      setTimeout(() => {
+        if (groupNameInputRef.current) {
+          groupNameInputRef.current.focus();
+        }
+      }, 100);
     } else if (selectedGroup) {
       // Edit mode: load group data
       const groupData = {
@@ -242,10 +269,19 @@ export function GroupForm({
       setFormData(groupData);
       setInitialData(groupData);
     }
-  }, [isAddMode, selectedGroup?.id, groupId]);
+  }, [isAddMode, selectedGroup?.id, groupId, getNextAvailableOrder]);
 
   const handleFieldChange = (field: keyof GroupConfig, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle field blur for validation
+  const handleFieldBlur = (field: keyof GroupConfig) => {
+    // Only validate on blur for name field (per acceptance criteria)
+    if (field === 'name') {
+      const errors = validateGroup(formData);
+      setValidationErrors(errors);
+    }
   };
 
   const handleServerToggle = (serverId: string, checked: boolean) => {
@@ -410,9 +446,10 @@ export function GroupForm({
       // Call API to create group
       await configApi.createGroup(formData as Omit<GroupConfig, 'id'>);
 
-      // Show success toast
+      // Show success toast with green styling and 3-second auto-dismiss
       toast({
-        title: 'Group added successfully',
+        variant: 'success',
+        title: '✓ Group created successfully',
         description: `${formData.name} has been created`,
         duration: 3000,
       });
@@ -458,6 +495,77 @@ export function GroupForm({
     }
   };
 
+  // Delete group handler
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedGroup?.id) {
+      toast({
+        variant: 'destructive',
+        title: 'No group selected',
+        description: 'Please select a group to delete',
+        duration: Infinity,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setDeleteDialogOpen(false);
+
+    try {
+      // Call API to delete group with selected reassignment strategy
+      const result = await configApi.deleteGroup(selectedGroup.id, reassignStrategy);
+
+      // Show success toast with appropriate message based on servers reassigned
+      const message = result.reassignedServers.length > 0
+        ? `✓ Group deleted, ${result.reassignedServers.length} server${result.reassignedServers.length !== 1 ? 's' : ''} reassigned`
+        : '✓ Group deleted';
+
+      toast({
+        variant: 'success',
+        title: message,
+        description: `${selectedGroup.name} has been removed`,
+        duration: 3000,
+      });
+
+      // Call parent delete handler to trigger UI updates
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      // Show error toast with specific reason
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete group',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred while deleting the group',
+        duration: Infinity,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+  };
+
+  // Calculate values for delete confirmation dialog
+  const assignedServersCount = useMemo(() => {
+    if (!selectedGroup?.serverIds) return 0;
+    return selectedGroup.serverIds.length;
+  }, [selectedGroup]);
+
+  const hasOtherGroups = useMemo(() => {
+    return groups.length > 1; // Current group + at least one other
+  }, [groups, selectedGroup]);
+
+  const assignedServers = useMemo(() => {
+    if (!selectedGroup?.serverIds) return [];
+    return servers.filter(server => selectedGroup.serverIds?.includes(server.id));
+  }, [selectedGroup, servers]);
+
   const panelTitle = isAddMode ? 'Add New Group' : `Edit Group: ${selectedGroup?.name || groupName}`;
   const saveHandler = isAddMode ? handleSaveNewGroup : handleSaveExisting;
   const hasErrors = Object.values(validationErrors).some(error => error !== null);
@@ -466,7 +574,7 @@ export function GroupForm({
     <div className="flex-1 bg-gray-50 flex flex-col">
       <PanelHeader
         title={panelTitle}
-        onDelete={isEditMode ? onDelete : undefined}
+        onDelete={isEditMode ? handleDeleteClick : undefined}
         onCancel={handleCancel}
         onSave={saveHandler}
         hasErrors={hasErrors}
@@ -485,9 +593,11 @@ export function GroupForm({
               htmlFor="group-name"
             >
               <Input
+                ref={groupNameInputRef}
                 id="group-name"
                 value={formData.name || ''}
                 onChange={(e) => handleFieldChange('name', e.target.value)}
+                onBlur={() => handleFieldBlur('name')}
                 placeholder="e.g., ARAGÓ"
                 disabled={isLoading}
               />
@@ -778,6 +888,97 @@ export function GroupForm({
           </FormGroup>
         </FormSection>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Group?</DialogTitle>
+            <DialogDescription>
+              {assignedServersCount === 0 ? (
+                <span>Remove group '{selectedGroup?.name || 'this group'}' from dashboard configuration?</span>
+              ) : (
+                <span>Group '{selectedGroup?.name || 'this group'}' contains {assignedServersCount} server{assignedServersCount !== 1 ? 's' : ''}. What should happen to them?</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {assignedServersCount > 0 && (
+            <div className="py-4">
+              <RadioGroup
+                value={reassignStrategy}
+                onValueChange={(value: string) => setReassignStrategy(value as ReassignStrategy)}
+                className="space-y-3"
+              >
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="unassign" id="unassign" className="mt-0.5" />
+                  <div className="flex-1">
+                    <Label htmlFor="unassign" className="font-medium cursor-pointer">
+                      Leave unassigned (no group)
+                    </Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Servers will be removed from all groups and will not appear in organized dashboard sections.
+                    </p>
+                  </div>
+                </div>
+
+                {hasOtherGroups && (
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="default" id="default" className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="default" className="font-medium cursor-pointer">
+                        Move to first available group
+                      </Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Servers will be moved to the group with the lowest display order.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </RadioGroup>
+
+              {/* Show affected servers */}
+              {assignedServersCount > 0 && assignedServers.length > 0 && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    {assignedServersCount} server{assignedServersCount !== 1 ? 's' : ''} affected:
+                  </p>
+                  <div className="text-xs text-gray-600 space-y-1">
+                    {assignedServers.slice(0, 5).map((server) => (
+                      <div key={server.id} className="flex items-center space-x-2">
+                        <span>•</span>
+                        <span>{server.name} ({server.ip})</span>
+                      </div>
+                    ))}
+                    {assignedServers.length > 5 && (
+                      <div className="text-gray-500 italic">
+                        ...and {assignedServers.length - 5} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isLoading}
+            >
+              Delete Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

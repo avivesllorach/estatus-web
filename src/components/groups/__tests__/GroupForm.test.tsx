@@ -109,6 +109,180 @@ describe('GroupForm', () => {
     expect(screen.getByText('No servers available. Add servers first to assign them to groups.')).toBeInTheDocument();
   });
 
+  // Group Name Validation Tests (Story 3.7)
+  describe('Group Name Validation', () => {
+    it('shows validation error when Group Name field is empty and blurred', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Focus and blur the empty field to trigger validation
+      fireEvent.focus(groupNameInput);
+      fireEvent.blur(groupNameInput);
+
+      // Should show validation error
+      expect(screen.getByText('Group name is required')).toBeInTheDocument();
+
+      // Check if error styling is applied (aria-invalid)
+      expect(groupNameInput).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('shows validation error for duplicate group name (case-insensitive)', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Enter a duplicate name (different case)
+      fireEvent.change(groupNameInput, { target: { value: 'aragó' } });
+      fireEvent.blur(groupNameInput);
+
+      // Should show duplicate name error
+      expect(screen.getByText("Group name 'aragó' already exists. Please choose a different name.")).toBeInTheDocument();
+    });
+
+    it('shows validation error for duplicate group name (exact match)', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Enter an exact duplicate name
+      fireEvent.change(groupNameInput, { target: { value: 'ARAGÓ' } });
+      fireEvent.blur(groupNameInput);
+
+      // Should show duplicate name error
+      expect(screen.getByText("Group name 'ARAGÓ' already exists. Please choose a different name.")).toBeInTheDocument();
+    });
+
+    it('clears validation error when duplicate name is changed to valid name', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Enter a duplicate name
+      fireEvent.change(groupNameInput, { target: { value: 'ARAGÓ' } });
+      fireEvent.blur(groupNameInput);
+
+      // Should show error
+      expect(screen.getByText(/already exists/)).toBeInTheDocument();
+
+      // Change to a valid name
+      fireEvent.change(groupNameInput, { target: { value: 'New Valid Group' } });
+      fireEvent.blur(groupNameInput);
+
+      // Error should be cleared
+      expect(screen.queryByText(/already exists/)).not.toBeInTheDocument();
+      expect(groupNameInput).toHaveAttribute('aria-invalid', 'false');
+    });
+
+    it('clears validation error when empty field is filled', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Focus and blur empty field to trigger error
+      fireEvent.focus(groupNameInput);
+      fireEvent.blur(groupNameInput);
+
+      // Should show required error
+      expect(screen.getByText('Group name is required')).toBeInTheDocument();
+
+      // Fill in the field
+      fireEvent.change(groupNameInput, { target: { value: 'Valid Group Name' } });
+      fireEvent.blur(groupNameInput);
+
+      // Error should be cleared
+      expect(screen.queryByText('Group name is required')).not.toBeInTheDocument();
+      expect(groupNameInput).toHaveAttribute('aria-invalid', 'false');
+    });
+
+    it('disables Save button when validation errors exist', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+      const saveButton = screen.getByText('Save Group');
+
+      // Initially Save button should be disabled due to empty required field
+      expect(saveButton).toBeDisabled();
+
+      // Focus and blur empty field to trigger validation
+      fireEvent.focus(groupNameInput);
+      fireEvent.blur(groupNameInput);
+
+      // Save button should still be disabled due to validation error
+      expect(saveButton).toBeDisabled();
+
+      // Fill in a valid name
+      fireEvent.change(groupNameInput, { target: { value: 'Valid Group Name' } });
+      fireEvent.blur(groupNameInput);
+
+      // Save button should now be enabled
+      expect(saveButton).not.toBeDisabled();
+    });
+
+    it('disables Save button when duplicate group name exists', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+      const saveButton = screen.getByText('Save Group');
+
+      // Enter a duplicate name
+      fireEvent.change(groupNameInput, { target: { value: 'ARAGÓ' } });
+      fireEvent.blur(groupNameInput);
+
+      // Save button should be disabled due to validation error
+      expect(saveButton).toBeDisabled();
+    });
+
+    it('allows editing existing group with same name (excludes current group from duplicate check)', async () => {
+      render(
+        <GroupForm
+          {...defaultProps}
+          groupId="group-1"
+          selectedGroup={mockGroup}
+        />
+      );
+
+      const groupNameInput = screen.getByDisplayValue('ARAGÓ');
+      const saveButton = screen.getByText('Save Group');
+
+      // Blur the field without changing the name
+      fireEvent.blur(groupNameInput);
+
+      // Should NOT show duplicate error (same group is excluded)
+      expect(screen.queryByText(/already exists/)).not.toBeInTheDocument();
+
+      // Save button should be enabled (no validation errors)
+      expect(saveButton).not.toBeDisabled();
+    });
+
+    it('shows validation error for whitespace-only group name', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Enter only whitespace
+      fireEvent.change(groupNameInput, { target: { value: '   ' } });
+      fireEvent.blur(groupNameInput);
+
+      // Should show required error (whitespace-only is treated as empty)
+      expect(screen.getByText('Group name is required')).toBeInTheDocument();
+    });
+
+    it('trims group name correctly for validation', async () => {
+      render(<GroupForm {...defaultProps} groupId="__ADD_MODE__" />);
+
+      const groupNameInput = screen.getByLabelText('Group Name *');
+
+      // Enter name with leading/trailing spaces
+      fireEvent.change(groupNameInput, { target: { value: '  Valid Group Name  ' } });
+      fireEvent.blur(groupNameInput);
+
+      // Should not show error (name is valid after trimming)
+      expect(screen.queryByText('Group name is required')).not.toBeInTheDocument();
+      expect(screen.queryByText(/already exists/)).not.toBeInTheDocument();
+    });
+  });
+
   // Enhanced Server Assignment Tests
   describe('Enhanced Server Assignment Interface', () => {
     it('renders search input and filter buttons', () => {
