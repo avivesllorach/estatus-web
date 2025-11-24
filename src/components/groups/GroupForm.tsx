@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { GroupConfig } from '@/types/group';
-import { ServerData } from '@/services/api';
+import { ServerData, configApi } from '@/services/api';
 import { Search, Filter, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 
 interface GroupFormProps {
@@ -18,6 +18,7 @@ interface GroupFormProps {
   groupName?: string | null;
   selectedGroup?: GroupConfig | null;
   servers: ServerData[]; // Available servers for assignment
+  groups: GroupConfig[]; // Available groups for validation
   onCancel: () => void;
   onSave: () => void;
   onDelete?: () => void;
@@ -104,6 +105,7 @@ export function GroupForm({
   groupName,
   selectedGroup,
   servers,
+  groups,
   onCancel,
   onSave,
   onDelete
@@ -288,6 +290,16 @@ export function GroupForm({
       errors.name = 'Group name is required';
     } else if (data.name.trim().length > 50) {
       errors.name = 'Group name must be 50 characters or less';
+    } else {
+      // Check for group name uniqueness (case-insensitive) for existing groups
+      const existingGroup = groups.find(g =>
+        g.id !== selectedGroup?.id && // Exclude current group when editing
+        g.name.toLowerCase() === data.name!.trim().toLowerCase()
+      );
+
+      if (existingGroup) {
+        errors.name = `Group name '${data.name!.trim()}' already exists. Please choose a different name.`;
+      }
     }
 
     // Order validation
@@ -337,27 +349,27 @@ export function GroupForm({
     setIsLoading(true);
 
     try {
-      // TODO: Call API to save group
-      // await configApi.updateGroup(selectedGroup.id, formData as GroupConfig);
+      // Call API to save group
+      await configApi.updateGroup(selectedGroup.id, formData as GroupConfig);
 
       // Update initialData to mark form as clean
       setInitialData(formData);
 
-      // Show success toast
+      // Show success toast with checkmark and green styling
       toast({
-        title: 'Group saved',
-        description: `${formData.name} configuration updated successfully`,
+        title: '✓ Group configuration saved successfully',
+        description: `${formData.name} has been updated`,
         duration: 3000,
       });
 
       // Call parent save handler
       onSave();
     } catch (error) {
-      // Show error toast
+      // Show error toast with specific reason and red background
       toast({
         variant: 'destructive',
-        title: 'Save failed',
-        description: error instanceof Error ? error.message : 'Failed to save group configuration',
+        title: 'Failed to save group',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred while saving the group configuration',
         duration: Infinity,
       });
     } finally {
@@ -395,8 +407,8 @@ export function GroupForm({
     setIsLoading(true);
 
     try {
-      // TODO: Call API to create group
-      // const newGroup = await configApi.createGroup(formData as Omit<GroupConfig, 'id'>);
+      // Call API to create group
+      await configApi.createGroup(formData as Omit<GroupConfig, 'id'>);
 
       // Show success toast
       toast({

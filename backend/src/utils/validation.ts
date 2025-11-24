@@ -115,6 +115,69 @@ export function validateIP(ip: string): boolean {
 }
 
 /**
+ * Validate group configuration
+ *
+ * @param config - Group configuration object to validate
+ * @returns ValidationErrors object if invalid, null if valid
+ */
+export function validateGroupConfig(config: any): ValidationErrors | null {
+  const errors: ValidationErrors = {};
+
+  // Required fields
+  if (!config.name || typeof config.name !== 'string' || config.name.trim() === '') {
+    errors.name = 'Group name is required';
+  }
+
+  if (!config.order || typeof config.order !== 'number') {
+    errors.order = 'Display order is required';
+  }
+
+  if (!config.serverIds || !Array.isArray(config.serverIds)) {
+    errors.serverIds = 'Server IDs must be an array';
+  }
+
+  // Name validation
+  if (config.name) {
+    const trimmedName = config.name.trim();
+    if (trimmedName.length > 50) {
+      errors.name = 'Group name must be 50 characters or less';
+    }
+    // Check for valid characters (letters, numbers, spaces, hyphens, underscores, and accented characters)
+    // Allow Unicode letters, numbers, spaces, hyphens, underscores, periods, and common punctuation
+    if (!/^[\p{L}\p{N}\s\-_.()[\]{}]+$/u.test(trimmedName)) {
+      errors.name = 'Group name contains invalid characters';
+    }
+  }
+
+  // Order validation
+  if (config.order) {
+    const order = Number(config.order);
+    if (isNaN(order) || order < 1 || order > 100) {
+      errors.order = 'Display order must be a number between 1 and 100';
+    }
+  }
+
+  // Server IDs validation
+  if (config.serverIds && Array.isArray(config.serverIds)) {
+    // Check for duplicate server IDs
+    const uniqueIds = new Set(config.serverIds);
+    if (uniqueIds.size !== config.serverIds.length) {
+      errors.serverIds = 'Duplicate server IDs are not allowed';
+    }
+
+    // Check for invalid server ID formats
+    for (const serverId of config.serverIds) {
+      if (typeof serverId !== 'string' || serverId.trim() === '') {
+        errors.serverIds = 'All server IDs must be non-empty strings';
+        break;
+      }
+    }
+  }
+
+  return Object.keys(errors).length > 0 ? errors : null;
+}
+
+/**
  * Sanitize string input (basic XSS prevention)
  *
  * @param input - String to sanitize

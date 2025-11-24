@@ -18,6 +18,17 @@ export function ConfigPage() {
   // Ref to track if we should bypass navigation check (for completing pending navigation)
   const bypassNavigationCheck = useRef(false);
 
+  const fetchGroups = async () => {
+    try {
+      const groupsData = await fetch('/api/config/groups')
+        .then(res => res.json())
+        .then(data => data.success ? data.data : []);
+      setGroups(groupsData);
+    } catch (error) {
+      console.error('Failed to fetch groups:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -140,7 +151,11 @@ export function ConfigPage() {
         selectedGroupId={selectedGroupId}
         selectedServerName={selectedServerName}
         selectedServer={selectedServerConfig}
+        selectedGroup={groups.find(g => g.id === selectedGroupId) || null}
+        servers={servers}
+        groups={groups}
         onNavigationRequest={handleNavigationRequest}
+        onGroupsRefresh={fetchGroups}
       >
         <p className="text-gray-600">Select a server or group from the sidebar to configure.</p>
       </MainPanel>

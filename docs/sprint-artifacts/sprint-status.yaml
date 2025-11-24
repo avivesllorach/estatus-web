@@ -63,14 +63,14 @@ development_status:
   3-1-create-group-edit-form-layout: done
   3-2-build-server-assignment-interface: done
   3-3-implement-group-display-order-controls: done
-  3-4-implement-save-group-functionality-with-backend-api: backlog
+  3-4-implement-save-group-functionality-with-backend-api: done
   3-5-implement-add-new-group-workflow: backlog
   3-6-implement-delete-group-with-server-reassignment: backlog
   3-7-implement-group-name-validation: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog
-  4-1-implement-backend-configuration-hot-reload-mechanism: backlog
+  4-1-implement-backend-configuration-hot-reload-mechanism: in-progress
   4-2-extend-sse-events-for-configuration-changes: backlog
   4-3-implement-dashboard-real-time-updates-for-server-changes: backlog
   4-4-implement-config-page-real-time-updates: backlog

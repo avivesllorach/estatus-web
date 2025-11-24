@@ -5,8 +5,10 @@ import { BasicServerInfoSection } from './forms/server/BasicServerInfoSection';
 import { SNMPConfigSection } from './forms/server/SNMPConfigSection';
 import { NetAppConfigSection } from './forms/server/NetAppConfigSection';
 import { CollapsibleConfigSection } from './forms/shared/CollapsibleConfigSection';
+import { GroupForm } from '@/components/groups/GroupForm';
 import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
-import { configApi } from '@/services/api';
+import { GroupConfig } from '@/types/group';
+import { configApi, ServerData } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -45,9 +47,14 @@ interface MainPanelProps {
   selectedGroupId: string | null;
   selectedServerName?: string | null;
   selectedServer?: ServerConfig | null;
+  selectedGroup?: GroupConfig | null;
+  selectedGroupName?: string | null;
+  servers?: ServerData[]; // Available servers for group assignment
+  groups?: GroupConfig[]; // Available groups for validation
   children?: ReactNode;
   onNavigationRequest?: (targetId: string, type: 'server' | 'group' | 'add-server') => void;
   onDirtyStateChange?: (isDirty: boolean) => void;
+  onGroupsRefresh?: () => void;
 }
 
 export function MainPanel({
@@ -55,7 +62,12 @@ export function MainPanel({
   selectedGroupId,
   selectedServerName,
   selectedServer,
-  onNavigationRequest
+  selectedGroup,
+  selectedGroupName,
+  servers = [],
+  groups = [],
+  onNavigationRequest,
+  onGroupsRefresh
 }: MainPanelProps) {
   const { toast } = useToast();
 
@@ -574,9 +586,28 @@ export function MainPanel({
   // Group edit form view (Epic 3)
   if (selectedGroupId) {
     return (
-      <div className="bg-[#fafafa] flex-1 p-6 flex flex-col">
-        <EmptyState message="Group editing coming soon" />
-      </div>
+      <GroupForm
+        groupId={selectedGroupId}
+        groupName={selectedGroupName}
+        selectedGroup={selectedGroup}
+        servers={servers}
+        groups={groups}
+        onCancel={() => {
+          if (onNavigationRequest) {
+            onNavigationRequest('', 'group'); // Clear group selection
+          }
+        }}
+        onSave={() => {
+          // Group saved successfully - trigger sidebar refresh
+          if (onGroupsRefresh) {
+            onGroupsRefresh();
+          }
+        }}
+        onDelete={selectedGroupId !== '__ADD_MODE__' ? () => {
+          // TODO: Implement group deletion with confirmation
+          console.log('Delete group:', selectedGroupId);
+        } : undefined}
+      />
     );
   }
 

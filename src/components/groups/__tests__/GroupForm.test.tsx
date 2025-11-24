@@ -37,6 +37,7 @@ describe('GroupForm', () => {
   const defaultProps = {
     groupId: null,
     servers: mockServers,
+    groups: [mockGroup], // Add missing groups prop
     onCancel: jest.fn(),
     onSave: jest.fn()
   };

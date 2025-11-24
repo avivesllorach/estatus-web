@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import * as fs from 'fs/promises';
 import { CONFIG_PATHS } from '../config/file-paths';
 import { ServerConfig } from '../types/server';
 import { writeConfigAtomic } from '../utils/fileUtils';
-import { validateServerConfig } from '../utils/validation';
+import { validateServerConfig, validateGroupConfig } from '../utils/validation';
+import { ConfigManager } from '../services/ConfigManager';
 
 interface GroupConfig {
   id: string;
@@ -109,6 +110,257 @@ router.get('/groups', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/config/groups
+ * Create new group configuration
+ *
+ * Request body: Omit<GroupConfig, 'id'>
+ * Response: ApiResponse<GroupConfig>
+ *
+ * Status codes:
+ * - 201: Created successfully
+ * - 400: Validation error
+ * - 500: Server error
+ */
+router.post('/groups', async (req: Request, res: Response) => {
+  const groupData = req.body as Omit<GroupConfig, 'id'>;
+
+  try {
+    // Validate request data
+    const tempGroupData: GroupConfig = {
+      ...groupData,
+      id: 'temp-id' // Temporary ID for validation (will be replaced)
+    };
+
+    const validationErrors = validateGroupConfig(tempGroupData);
+    if (validationErrors) {
+      console.warn('[Config API] Validation failed for group creation', {
+        groupName: groupData.name,
+        errors: validationErrors,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<any> = {
+        success: false,
+        error: 'Validation failed',
+        data: validationErrors,
+      };
+      return res.status(400).json(response);
+    }
+
+    // Read current dashboard-layout.json
+    let layout: { groups: GroupConfig[] };
+    try {
+      const fileContent = await fs.readFile(CONFIG_PATHS.layout, 'utf-8');
+      layout = JSON.parse(fileContent);
+
+      // Ensure groups array exists
+      if (!layout.groups || !Array.isArray(layout.groups)) {
+        layout.groups = [];
+      }
+    } catch (error) {
+      // File doesn't exist or is invalid, create new layout
+      layout = { groups: [] };
+    }
+
+    // Check for group name uniqueness (case-insensitive)
+    const existingGroupWithSameName = layout.groups.find(
+      (g) => g.name.toLowerCase() === groupData.name.toLowerCase().trim()
+    );
+
+    if (existingGroupWithSameName) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: `Group name '${groupData.name.trim()}' already exists. Please choose a different name.`,
+      };
+      return res.status(400).json(response);
+    }
+
+    // Generate unique group ID
+    const maxId = layout.groups.reduce((max, group) => {
+      const match = group.id.match(/^group-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+
+    const newGroupId = `group-${maxId + 1}`;
+
+    // Sanitize and create group data
+    const sanitizedGroupData: GroupConfig = {
+      id: newGroupId,
+      name: groupData.name.trim(),
+      order: Math.max(1, Math.min(100, Number(groupData.order))), // Clamp between 1-100
+      serverIds: Array.isArray(groupData.serverIds) ? [...new Set(groupData.serverIds)] : [], // Remove duplicates
+    };
+
+    // Add group to array
+    layout.groups.push(sanitizedGroupData);
+
+    // Write updated layout atomically
+    await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+    console.info('[Config API] Group created successfully', {
+      groupId: newGroupId,
+      name: sanitizedGroupData.name,
+      order: sanitizedGroupData.order,
+      serverCount: sanitizedGroupData.serverIds.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return success with created group
+    const response: ApiResponse<GroupConfig> = {
+      success: true,
+      data: sanitizedGroupData,
+    };
+    res.status(201).json(response);
+  } catch (error) {
+    console.error('[Config API] Group creation failed', {
+      groupName: groupData.name,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to create group',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * PUT /api/config/groups/:id
+ * Update existing group configuration
+ *
+ * Request body: GroupConfig
+ * Response: ApiResponse<GroupConfig>
+ *
+ * Status codes:
+ * - 200: Success
+ * - 400: Validation error or ID mismatch
+ * - 404: Group not found
+ * - 500: Server error
+ */
+router.put('/groups/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const groupData = req.body as GroupConfig;
+
+  try {
+    // Validate request data
+    const validationErrors = validateGroupConfig(groupData);
+    if (validationErrors) {
+      console.warn('[Config API] Validation failed for group update', {
+        groupId: id,
+        errors: validationErrors,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<any> = {
+        success: false,
+        error: 'Validation failed',
+        data: validationErrors, // validationErrors as data field
+      };
+      return res.status(400).json(response);
+    }
+
+    // Ensure ID in body matches URL parameter
+    if (groupData.id !== id) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Group ID in body must match URL parameter',
+      };
+      return res.status(400).json(response);
+    }
+
+    // Read current dashboard-layout.json
+    let layout: { groups: GroupConfig[] };
+    try {
+      const fileContent = await fs.readFile(CONFIG_PATHS.layout, 'utf-8');
+      layout = JSON.parse(fileContent);
+
+      // Ensure groups array exists
+      if (!layout.groups || !Array.isArray(layout.groups)) {
+        layout.groups = [];
+      }
+    } catch (error) {
+      // File doesn't exist or is invalid, create new layout
+      layout = { groups: [] };
+    }
+
+    // Find group by ID
+    const groupIndex = layout.groups.findIndex((g) => g.id === id);
+    if (groupIndex === -1) {
+      console.warn('[Config API] Group not found for update', {
+        groupId: id,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<never> = {
+        success: false,
+        error: `Group with ID '${id}' not found`,
+      };
+      return res.status(404).json(response);
+    }
+
+    // Check for group name uniqueness (case-insensitive)
+    const existingGroupWithSameName = layout.groups.find(
+      (g) => g.id !== id && g.name.toLowerCase() === groupData.name.toLowerCase().trim()
+    );
+
+    if (existingGroupWithSameName) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: `Group name '${groupData.name.trim()}' already exists. Please choose a different name.`,
+      };
+      return res.status(400).json(response);
+    }
+
+    // Sanitize group data
+    const sanitizedGroupData: GroupConfig = {
+      id: groupData.id,
+      name: groupData.name.trim(),
+      order: Math.max(1, Math.min(100, Number(groupData.order))), // Clamp between 1-100
+      serverIds: Array.isArray(groupData.serverIds) ? [...new Set(groupData.serverIds)] : [], // Remove duplicates
+    };
+
+    // Update group in array
+    layout.groups[groupIndex] = sanitizedGroupData;
+
+    // Write updated layout atomically
+    await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+    console.info('[Config API] Group updated successfully', {
+      groupId: id,
+      name: sanitizedGroupData.name,
+      order: sanitizedGroupData.order,
+      serverCount: sanitizedGroupData.serverIds.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return success with updated group
+    const response: ApiResponse<GroupConfig> = {
+      success: true,
+      data: sanitizedGroupData,
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('[Config API] Group update failed', {
+      groupId: id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to save group configuration',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
  * POST /api/config/servers
  * Create new server configuration
  *
@@ -184,6 +436,18 @@ router.post('/servers', async (req: Request, res: Response) => {
 
     // Write updated array atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    // Trigger hot-reload after successful file write
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering hot-reload after server creation');
+        await configManager.reloadServers();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger hot-reload after server creation:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
 
     console.info('[Config API] Server created successfully', {
       serverId: serverData.id,
@@ -280,6 +544,7 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     // Write updated array atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
 
+    
     console.info('[Config API] Server updated successfully', {
       serverId: id,
       name: serverData.name,
@@ -353,6 +618,7 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     // Write updated servers.json atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
 
+    
     // Clean up group references (referential integrity)
     // Remove serverId from all groups in dashboard-layout.json
     try {
@@ -380,6 +646,7 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
         // Write updated layout atomically
         await writeConfigAtomic(CONFIG_PATHS.layout, layout);
 
+        
         if (affectedGroups.length > 0) {
           console.info('[Config API] Server removed from groups', {
             serverId: id,
@@ -425,4 +692,19 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+/**
+ * Create config routes with ConfigManager integration using middleware pattern
+ * @param configManager - ConfigManager instance for hot-reload functionality
+ * @returns Express router with config endpoints
+ */
+export function createConfigRoutes(configManager: ConfigManager): Router {
+  // Add middleware to attach configManager to all requests
+  router.use((req: Request, res: Response, next: NextFunction) => {
+    (req as any).configManager = configManager;
+    next();
+  });
+
+  return router;
+}
+
+export default router; // Keep default export for backward compatibility

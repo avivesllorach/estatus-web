@@ -250,6 +250,13 @@ export interface ServerConfig {
   };
 }
 
+export interface GroupConfig {
+  id: string;
+  name: string;
+  order: number;
+  serverIds: string[];
+}
+
 export const configApi = {
   /**
    * Create new server configuration
@@ -333,6 +340,66 @@ export const configApi = {
       return result.data.deletedId;
     } catch (error) {
       console.error(`Error deleting server ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create new group configuration
+   */
+  async createGroup(data: Omit<GroupConfig, 'id'>): Promise<GroupConfig> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/groups`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result: ApiResponse<GroupConfig> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create group');
+      }
+
+      if (!result.data) {
+        throw new Error('Group creation succeeded but no data returned');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error creating group:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update existing group configuration
+   */
+  async updateGroup(id: string, data: GroupConfig): Promise<GroupConfig> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/groups/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result: ApiResponse<GroupConfig> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update group');
+      }
+
+      if (!result.data) {
+        throw new Error('Group update succeeded but no data returned');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error(`Error updating group ${id}:`, error);
       throw error;
     }
   },

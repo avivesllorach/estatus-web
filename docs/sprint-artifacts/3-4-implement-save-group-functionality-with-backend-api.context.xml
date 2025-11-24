@@ -1,0 +1,272 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>4</storyId>
+    <title>Implement Save Group Functionality with Backend API</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24T12:06:02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-4-implement-save-group-functionality-with-backend-api.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>save my group configuration changes through the backend API</iWant>
+    <soThat>they persist to `dashboard-layout.json` and update the dashboard layout</soThat>
+    <tasks>## Tasks / Subtasks
+
+- [ ] Implement save button loading state and API call (AC: 1, 2)
+  - [ ] Add loading state to GroupForm component
+  - [ ] Create handleSaveExisting function for PUT request
+  - [ ] Integrate with existing form validation patterns
+- [ ] Create backend PUT /api/config/groups/:id endpoint (AC: 2, 3, 7)
+  - [ ] Add route handler in backend/src/routes/config.ts
+  - [ ] Implement group data validation (name uniqueness, order positivity)
+  - [ ] Use atomic file write pattern for dashboard-layout.json
+- [ ] Integrate success toast notification (AC: 4)
+  - [ ] Use shadcn/ui Toast component
+  - [ ] Show success message after successful save
+  - [ ] Configure green background and 3-second auto-dismiss
+- [ ] Update sidebar to reflect changes (AC: 5)
+  - [ ] Trigger group list refresh after successful save
+  - [ ] Update server count display for modified group
+  - [ ] Ensure visual consistency with existing sidebar patterns
+- [ ] Implement error handling and feedback (AC: 6)
+  - [ ] Add try-catch around API calls
+  - [ ] Show error toast with specific failure reasons
+  - [ ] Configure red background with manual dismiss requirement
+- [ ] Add comprehensive validation (AC: 7)
+  - [ ] Backend validation for group name uniqueness (case-insensitive)
+  - [ ] Validate display order is positive integer
+  - [ ] Return 400 status with detailed validation errors
+  - [ ] Frontend prevents save when validation fails</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Save Button Loading State**: Save Group button shows loading state (spinner, disabled) during API call to provide visual feedback
+2. **Backend API Integration**: PUT /api/config/groups/:id request sends updated group data including group name, display order, and array of assigned server IDs
+3. **Atomic File Writing**: Backend validates the data and updates `dashboard-layout.json` atomically using temp file + rename pattern to prevent corruption
+4. **Success Feedback**: Success toast notification appears: "✓ Group configuration saved successfully" with green background and auto-dismiss after 3 seconds
+5. **Sidebar Update**: Group appears updated in the sidebar with correct name and server count reflecting the changes
+6. **Error Handling**: Error toast shown with specific reason if save fails, with red background that stays visible until dismissed
+7. **Data Validation**: Backend validates group name uniqueness and ensures order is a positive integer before saving</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown - Group Management</title>
+        <section>Epic 3: Dashboard Group Management</section>
+        <snippet>Enable users to organize servers into dashboard groups with custom layouts, controlling how servers appear on the monitoring dashboard. Users can create, edit, delete, and reorder groups, then assign servers to them.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Configuration UI Architecture</title>
+        <section>API Design - Group Management</section>
+        <snippet>PUT /api/config/groups/:id - Request body: GroupConfig - Response: ApiResponse&lt;GroupConfig&gt; - Status: 200 (success), 400 (validation), 404 (not found), 500 (error)</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Configuration UI Architecture</title>
+        <section>Data Architecture - dashboard-layout.json</section>
+        <snippet>{"groups": [{"id": "group-1", "name": "ARAGÓ", "order": 1, "serverIds": ["server-001", "server-002"]}]}</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Configuration UI Architecture</title>
+        <section>Architectural Decisions - Atomic File Write Implementation</section>
+        <snippet>Use Node.js fs.writeFileSync to temp file, then fs.renameSync (atomic on POSIX) - Rename operation is atomic on POSIX/Linux systems - Original file never partially written (either complete or unchanged)</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Configuration UI Architecture</title>
+        <section>Implementation Patterns - API Route Handler</section>
+        <snippet>router.put('/groups/:id', async (req, res) => { try { const validationErrors = validateGroupConfig(req.body); if (validationErrors) { return res.status(400).json({ success: false, error: 'Validation failed', validationErrors }); } const group = await configManager.updateGroup(req.params.id, req.body); res.json({ success: true, data: group }); } catch (error) { logger.error('Group update failed', { error }); res.status(500).json({ success: false, error: 'Failed to update group' }); }})</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/groups/GroupForm.tsx</path>
+        <kind>component</kind>
+        <symbol>handleSaveExisting</symbol>
+        <lines>311-366</lines>
+        <reason>Contains save handler that needs API integration for PUT request</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/groups/GroupForm.tsx</path>
+        <kind>component</kind>
+        <symbol>validateGroup</symbol>
+        <lines>283-308</lines>
+        <reason>Frontend validation function to ensure valid group data before API call</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/routes/config.ts</path>
+        <kind>route</kind>
+        <symbol>PUT /api/config/servers/:id</symbol>
+        <lines>240-322</lines>
+        <reason>Pattern to follow for implementing PUT /api/config/groups/:id endpoint</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/utils/fileUtils.ts</path>
+        <kind>utility</kind>
+        <symbol>writeConfigAtomic</symbol>
+        <lines>16-35</lines>
+        <reason>Atomic file write function to use for dashboard-layout.json updates</reason>
+      </artifact>
+      <artifact>
+        <path>backend/dashboard-layout.json</path>
+        <kind>config</kind>
+        <symbol>groups array</symbol>
+        <lines>2-23</lines>
+        <reason>Target file structure that needs to be updated atomically</reason>
+      </artifact>
+      <artifact>
+        <path>src/types/group.ts</path>
+        <kind>type</kind>
+        <symbol>GroupConfig</symbol>
+        <lines>2-7</lines>
+        <reason>TypeScript interface for group configuration</reason>
+      </artifact>
+    </code>
+    <dependencies>
+  <ecosystem>
+    <name>frontend</name>
+    <packages>
+      <package>
+        <name>react</name>
+        <version>18.2.0</version>
+        <purpose>UI framework</purpose>
+      </package>
+      <package>
+        <name>typescript</name>
+        <version>5.2.2</version>
+        <purpose>Type safety</purpose>
+      </package>
+      <package>
+        <name>@radix-ui/react-toast</name>
+        <version>1.2.15</version>
+        <purpose>Success/error notifications</purpose>
+      </package>
+      <package>
+        <name>lucide-react</name>
+        <version>0.554.0</version>
+        <purpose>Icons</purpose>
+      </package>
+    </packages>
+  </ecosystem>
+  <ecosystem>
+    <name>backend</name>
+    <packages>
+      <package>
+        <name>express</name>
+        <version>4.18.2</version>
+        <purpose>Web framework</purpose>
+      </package>
+      <package>
+        <name>typescript</name>
+        <version>5.3.3</version>
+        <purpose>Type safety</purpose>
+      </package>
+      <package>
+        <name>fs/promises</name>
+        <version>builtin</version>
+        <purpose>Async file operations</purpose>
+      </package>
+    </packages>
+  </ecosystem>
+</dependencies>
+  </artifacts>
+
+  <constraints>
+  <constraint>
+    <type>validation</type>
+    <description>Backend must re-validate all data (defense in depth) - group name uniqueness, positive order, valid server IDs</description>
+    <source>backend/src/utils/validation.ts pattern</source>
+  </constraint>
+  <constraint>
+    <type>atomic</type>
+    <description>Use writeConfigAtomic() utility for dashboard-layout.json updates to prevent corruption</description>
+    <source>backend/src/utils/fileUtils.ts:writeConfigAtomic</source>
+  </constraint>
+  <constraint>
+    <type>api-response</type>
+    <description>Return ApiResponse&lt;GroupConfig&gt; format with success/data or error fields consistently</description>
+    <source>backend/src/routes/config.ts:ApiResponse interface</source>
+  </constraint>
+  <constraint>
+    <type>logging</type>
+    <description>Log group save operations with structured context and timestamps</description>
+    <source>backend/src/routes/config.ts logging pattern</source>
+  </constraint>
+  <constraint>
+    <type>shadcn-ui</type>
+    <description>Use existing Toast component for success/error feedback with green/red variants</description>
+    <source>src/components/groups/GroupForm.tsx toast usage</source>
+  </constraint>
+  <constraint>
+    <type>file-paths</type>
+    <description>Use CONFIG_PATHS.layout for dashboard-layout.json path configuration</description>
+    <source>backend/src/routes/config.ts file path pattern</source>
+  </constraint>
+</constraints>
+  <interfaces>
+  <interface>
+    <name>PUT /api/config/groups/:id</name>
+    <kind>REST endpoint</kind>
+    <signature>router.put('/groups/:id', async (req, res) => { /* validate, atomic write, return ApiResponse */ })</signature>
+    <path>backend/src/routes/config.ts</path>
+  </interface>
+  <interface>
+    <name>GroupConfig</name>
+    <kind>TypeScript interface</kind>
+    <signature>interface GroupConfig { id: string; name: string; order: number; serverIds: string[]; }</signature>
+    <path>src/types/group.ts</path>
+  </interface>
+  <interface>
+    <name>validateGroupConfig</name>
+    <kind>function</kind>
+    <signature>function validateGroupConfig(config: any): ValidationErrors | null</signature>
+    <path>backend/src/utils/validation.ts pattern</path>
+  </interface>
+  <interface>
+    <name>writeConfigAtomic</name>
+    <kind>function</kind>
+    <signature>export async function writeConfigAtomic(filePath: string, data: any): Promise<void></signature>
+    <path>backend/src/utils/fileUtils.ts</path>
+  </interface>
+</interfaces>
+  <tests>
+    <standards>
+      Use Jest + React Testing Library for frontend components with user interaction testing.
+      Test loading states, validation feedback, and API integration. Use integration tests for
+      backend endpoints to verify atomic file operations and response formats.
+    </standards>
+    <locations>
+      Frontend: src/components/**/__tests__/ (Jest + React Testing Library)
+      Backend: backend/src/**/__tests__/ (Jest + supertest for API integration)
+      Validation: backend/src/utils/validation.test.ts (unit tests)
+    </locations>
+    <ideas>
+      <idea mappedTo="AC1">
+        Test loading state appears and save button is disabled during API call
+      </idea>
+      <idea mappedTo="AC2">
+        Test PUT request format and body validation
+      </idea>
+      <idea mappedTo="AC3">
+        Test atomic file write - verify temp file + rename pattern works correctly
+      </idea>
+      <idea mappedTo="AC4">
+        Test success toast appears with correct message and green styling
+      </idea>
+      <idea mappedTo="AC5">
+        Test sidebar updates reflect group name and server count changes
+      </idea>
+      <idea mappedTo="AC6">
+        Test error toast appears with specific validation error messages
+      </idea>
+      <idea mappedTo="AC7">
+        Test backend validation for group name uniqueness and order positivity
+      </idea>
+    </ideas>
+  </tests>
+</story-context>
