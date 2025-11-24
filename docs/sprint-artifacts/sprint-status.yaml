@@ -59,10 +59,10 @@ development_status:
   2-10-implement-cancel-button-behavior: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-create-group-edit-form-layout: backlog
-  3-2-build-server-assignment-interface: backlog
-  3-3-implement-group-display-order-controls: backlog
+  epic-3: contexted
+  3-1-create-group-edit-form-layout: done
+  3-2-build-server-assignment-interface: done
+  3-3-implement-group-display-order-controls: done
   3-4-implement-save-group-functionality-with-backend-api: backlog
   3-5-implement-add-new-group-workflow: backlog
   3-6-implement-delete-group-with-server-reassignment: backlog
