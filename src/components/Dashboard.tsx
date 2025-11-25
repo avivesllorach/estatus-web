@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { ServerContainer } from './ServerContainer';
-import { apiService, ServerData } from '../services/api';
+import { apiService, ServerData, GroupConfig } from '../services/api';
 
 export function Dashboard() {
   const [servers, setServers] = useState<ServerData[]>([]);
+  const [groups, setGroups] = useState<GroupConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   /* const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting'); */
@@ -14,17 +15,23 @@ export function Dashboard() {
         // Fetch initial server data
         const initialServers = await apiService.fetchServers();
         setServers(initialServers);
+
+        // Fetch initial groups data
+        const initialGroups = await apiService.fetchGroups();
+        setGroups(initialGroups);
+
         setLoading(false);
 
         // Connect to real-time updates
         apiService.connectToStatusUpdates((updatedServers) => {
           setServers(updatedServers);
-          /* setConnectionStatus('connected'); */
+        }, (updatedGroups) => {
+          setGroups(updatedGroups);
         });
 
         /* setConnectionStatus('connected'); */
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load servers');
+        setError(err instanceof Error ? err.message : 'Failed to load data');
         setLoading(false);
         /* setConnectionStatus('disconnected'); */
       }
@@ -38,44 +45,34 @@ export function Dashboard() {
     };
   }, []);
 
-  // Create container groupings from server data: Row 1: 6,2,1,1 | Row 2: 7,2,1 | Row 3: 3,3,4 | Row 4: 4,2,2,2
-  const createContainerGroups = (serverList: ServerData[]) => {
-    if (serverList.length === 0) return [];
+  // Create container groups from groups configuration and server data
+  const createContainerGroups = (serverList: ServerData[], groupList: GroupConfig[]) => {
+    if (serverList.length === 0 || groupList.length === 0) return [];
 
-    return [
-      // Row 1
-      [
-        { servers: serverList.slice(0, 4), count: 4, title: "ARAGÓ" },
-        { servers: serverList.slice(4, 7), count: 3, title: "PROVENÇA" },
-        { servers: serverList.slice(7, 9), count: 2, title: "DATASTORE ARAGÓ" },
-        { servers: serverList.slice(9, 11), count: 2, title: "DATASTORE PROVENÇA" },
-      ],
-      // Row 2
-      [
-        { servers: serverList.slice(11, 14), count: 3, title: "VIRTUAL CAMPUS" },
-        { servers: serverList.slice(14, 21), count: 7, title: "VIRTUAL CAMPUS - AULAS" },
-      ],
-      // Row 3
-      [
-        { servers: serverList.slice(21, 24), count: 3, title: "ATLAS" },
-        { servers: serverList.slice(24, 25), count: 1, title: "INTEGRADOR" },
-        { servers: serverList.slice(25, 27), count: 2, title: "BI" },
-        { servers: serverList.slice(27, 31), count: 4, title: "IRENE" },
+    // Create a map for fast server lookup
+    const serverMap = new Map(serverList.map(server => [server.id, server]));
 
-      ],
-      // Row 4
-      [
-        { servers: serverList.slice(31, 35), count: 4, title: "AD" },
-        { servers: serverList.slice(35, 37), count: 2, title: "COMMVAULT" },
-        { servers: serverList.slice(37, 39), count: 2, title: "RADIUS" },
-        { servers: serverList.slice(39, 40), count: 1, title: "CAS" },
-        { servers: serverList.slice(40, 41), count: 1, title: "LDAP" },
-        { servers: serverList.slice(41, 42), count: 1, title: "SMTP" },
-      ],
-    ];
+    // Sort groups by order, then by name for consistency
+    const sortedGroups = [...groupList].sort((a, b) => a.order - b.order);
+
+    // Create groups with their assigned servers
+    return sortedGroups
+      .filter(group => group.serverIds.length > 0) // Only show groups with servers
+      .map(group => {
+        const groupServers = group.serverIds
+          .map(serverId => serverMap.get(serverId))
+          .filter((server): server is ServerData => server !== undefined); // Filter out undefined servers
+
+        return {
+          servers: groupServers,
+          count: groupServers.length,
+          title: group.name,
+        };
+      })
+      .filter(group => group.servers.length > 0); // Filter out groups with no valid servers
   };
 
-  const containerGroups = createContainerGroups(servers);
+  const containerGroups = createContainerGroups(servers, groups);
 
   if (loading) {
     return (
@@ -114,21 +111,17 @@ export function Dashboard() {
     <div className="h-screen bg-gray-300 overflow-hidden flex flex-col">
 
       <div className="flex-1 flex flex-col gap-4 max-h-full p-4">
-        {containerGroups.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-4 flex-1">
-            {row.map((container, containerIndex) => (
-              <div
-                key={containerIndex}
-                className="flex-1"
-                style={{ flex: container.count }}
-              >
-                <ServerContainer
-                  title={container.title}
-                  servers={container.servers}
-                  serverCount={container.count}
-                />
-              </div>
-            ))}
+        {containerGroups.map((container) => (
+          <div
+            key={container.title}
+            className="flex-1"
+            style={{ flex: container.count || 1 }}
+          >
+            <ServerContainer
+              title={container.title}
+              servers={container.servers}
+              serverCount={container.count}
+            />
           </div>
         ))}
       </div>

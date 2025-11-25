@@ -21,7 +21,7 @@ export function DeviceCard({ name, ip, isOnline, diskInfo, isDummy }: DeviceCard
   const hasDiskInfo = actualDisks.length > 0;
 
   return (
-    <div className={`group relative overflow-hidden rounded-lg border p-3 shadow-sm h-[140px] ${isOnline
+    <div className={`group relative overflow-hidden rounded-lg border p-3 shadow-sm h-[140px] transition-all duration-300 ease-in-out ${isOnline
       ? 'bg-green-200 border-green-400'
       : 'bg-red-200 border-red-400 animate-glow-pulse-red-fast'
       } ${isDummy ? 'ring-2 ring-blue-200 ring-opacity-50' : ''

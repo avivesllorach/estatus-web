@@ -1,0 +1,324 @@
+<story-context id="{bmad_folder}/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>1</storyId>
+    <title>Implement Backend Configuration Hot-Reload Mechanism</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24T10:00:00.000Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-1-implement-backend-configuration-hot-reload-mechanism.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a backend service</asA>
+    <iWant>to reload configuration files without restarting the process</iWant>
+    <soThat>configuration changes take effect immediately</soThat>
+    <tasks>- [ ] Create ConfigManager service with event-driven architecture (AC: 1, 2)
+  - [ ] Implement file watching or manual trigger mechanism
+  - [ ] Add configuration reload methods for servers and groups
+  - [ ] Extend EventEmitter pattern for notifications
+  - [ ] Add error handling and logging for failed reloads
+- [ ] Enhance PingService with dynamic server management (AC: 4)
+  - [ ] Add `addServers()` method to start monitoring new servers
+  - [ ] Add `removeServers()` method to stop monitoring deleted servers
+  - [ ] Add `updateServers()` method to modify existing server configurations
+  - [ ] Ensure delta updates (no interruption to unchanged servers)
+  - [ ] Maintain existing monitoring for unaffected servers (&lt;5s gap requirement)
+- [ ] Integrate ConfigManager with ServerMonitoringApp (AC: 3, 5, 6)
+  - [ ] Modify ServerMonitoringApp to use ConfigManager
+  - [ ] Ensure existing SSE connections survive reload operations
+  - [ ] Add reload trigger calls to existing config endpoints
+  - [ ] Implement performance monitoring and timeout handling
+- [ ] Add comprehensive error handling and logging (AC: 6)
+  - [ ] Log all configuration reload attempts with timestamps
+  - [ ] Handle file read errors gracefully
+  - [ ] Maintain last known good configuration on reload failure
+  - [ ] Add structured logging for debugging and monitoring
+- [ ] Test hot-reload functionality end-to-end
+  - [ ] Test server addition without restart
+  - [ ] Test server deletion without restart
+  - [ ] Test server modification without restart
+  - [ ] Verify SSE connections remain stable during reload
+  - [ ] Performance test reload speed (&lt;2 seconds requirement)</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Configuration Reload Detection**: Backend detects when `servers.json` or `dashboard-layout.json` files are updated and automatically triggers a configuration reload without process restart
+2. **In-Memory State Updates**: New configuration is loaded into memory and replaces the existing server list and group layout data structures
+3. **SSE Connection Preservation**: Existing Server-Sent Events connections remain active during configuration reload (no disconnect/reconnect for connected clients)
+4. **PingService Dynamic Updates**: PingService receives configuration changes and updates its server list:
+   - Stops monitoring deleted servers immediately
+   - Starts monitoring newly added servers immediately
+   - Updates configuration for modified servers (IP, credentials, etc.)
+5. **Performance Requirements**: Configuration reload completes within 2 seconds as specified in NFR-P2
+6. **Error Handling**: Any reload errors are logged but don't crash the backend process; last valid configuration remains active
+7. **Integration Points**: Reload mechanism is triggered after successful file writes in existing config API endpoints (Stories 2.6, 3.4)</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Specification</title>
+        <section>Architectural Decision 1: Configuration Hot-Reload Strategy</section>
+        <snippet>Event-Driven Reload Pattern: POST /api/config/servers → Atomic file write → configManager.emit('config-changed') → PingService.onConfigChange() → SSE broadcast</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Specification</title>
+        <section>Architectural Decision 2: PingService Adaptation Pattern</section>
+        <snippet>Delta-Based Update: Calculate diff → stop/start monitoring for changed servers only, preserving monitoring for unchanged servers</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Epic 4: Live Configuration Updates - Story 4.1</section>
+        <snippet>After successful file write in POST/PUT/DELETE endpoints, trigger reload. Reload function: 1. Re-read servers.json and dashboard-layout.json 2. Update in-memory state 3. Notify PingService of server list changes</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>Live Update Mechanism</section>
+        <snippet>Backend API endpoints for CRUD operations on servers and groups, Backend hot-reloads configuration without restart, PingService adapts to config changes without dropping SSE connections</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>Performance Requirements</section>
+        <snippet>NFR-P2: Backend configuration hot-reload must complete within 2 seconds, Dashboard updates via SSE must propagate within 1 second of backend reload</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/src/services/pingService.ts</path>
+        <kind>service</kind>
+        <symbol>PingService</symbol>
+        <lines>8-17</lines>
+        <reason>Existing EventEmitter pattern that ConfigManager should follow for consistency. PingService already extends EventEmitter and uses emit/statusChange events.</reason>
+      </file>
+      <file>
+        <path>backend/src/services/pingService.ts</path>
+        <kind>service</kind>
+        <symbol>constructor</symbol>
+        <lines>14-17</lines>
+        <reason>Current initialization pattern that ConfigManager should integrate with to provide hot-reload capabilities</reason>
+      </file>
+      <file>
+        <path>backend/src/server.ts</path>
+        <kind>server</kind>
+        <symbol>loadServers</symbol>
+        <lines>43-60</lines>
+        <reason>Current server loading mechanism that ConfigManager will replace/extend for hot-reload functionality</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/config.ts</path>
+        <kind>route</kind>
+        <symbol>POST /api/config/servers</symbol>
+        <lines>124-212</lines>
+        <reason>Existing server creation endpoint that should trigger hot-reload after successful file write via writeConfigAtomic</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/config.ts</path>
+        <kind>route</kind>
+        <symbol>PUT /api/config/servers/:id</symbol>
+        <lines>227-308</lines>
+        <reason>Existing server update endpoint that should trigger hot-reload after successful file write via writeConfigAtomic</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/config.ts</path>
+        <kind>route</kind>
+        <symbol>DELETE /api/config/servers/:id</symbol>
+        <lines>325-426</lines>
+        <reason>Existing server deletion endpoint that should trigger hot-reload after successful file write via writeConfigAtomic</reason>
+      </file>
+      <file>
+        <path>backend/src/utils/fileUtils.ts</path>
+        <kind>utility</kind>
+        <symbol>writeConfigAtomic</symbol>
+        <lines>16-35</lines>
+        <reason>Atomic file write utility that config endpoints already use - ConfigManager should leverage this for consistency</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/events.ts</path>
+        <kind>route</kind>
+        <symbol>SSE endpoint</symbol>
+        <lines>9-17</lines>
+        <reason>Existing SSE infrastructure that must remain stable during hot-reload operations. ConfigManager should broadcast new event types to this endpoint.</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/events.ts</path>
+        <kind>route</kind>
+        <symbol>statusChange event</symbol>
+        <lines>30-35</lines>
+        <reason>Existing event pattern that ConfigManager should follow for broadcasting configuration changes</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>backend</ecosystem>
+      <packages>
+        <package>
+          <name>express</name>
+          <version>^4.18.2</version>
+          <purpose>Web framework - already used for API endpoints and SSE</purpose>
+        </package>
+        <package>
+          <name>cors</name>
+          <version>^2.8.5</version>
+          <purpose>CORS middleware - already configured for API endpoints</purpose>
+        </package>
+        <package>
+          <name>ping</name>
+          <version>^0.4.4</version>
+          <purpose>Server monitoring - used by PingService for connectivity checks</purpose>
+        </package>
+        <package>
+          <name>net-snmp</name>
+          <version>^3.23.0</version>
+          <purpose>SNMP monitoring - used by SNMPService for disk usage monitoring</purpose>
+        </package>
+        <package>
+          <name>EventEmitter</name>
+          <version>built-in</version>
+          <purpose>Event pattern - ConfigManager should extend this for consistency with PingService</purpose>
+        </package>
+        <package>
+          <name>fs/promises</name>
+          <version>built-in</version>
+          <purpose>File I/O - ConfigManager will use for reading configuration files</purpose>
+        </package>
+      </packages>
+      <ecosystem>frontend</ecosystem>
+      <packages>
+        <package>
+          <name>react</name>
+          <version>^18.2.0</version>
+          <purpose>UI framework - existing dashboard will receive SSE events from ConfigManager</purpose>
+        </package>
+        <package>
+          <name>react-router-dom</name>
+          <version>^7.9.6</version>
+          <purpose>Routing - config page will listen for SSE events during hot-reload</purpose>
+        </package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <name>Event-Driven Architecture Pattern</name>
+      <description>ConfigManager must extend EventEmitter and emit 'config-changed' events that PingService and SSE broadcaster can listen to, following the existing pattern established by PingService</description>
+    </constraint>
+    <constraint>
+      <name>Delta-Based Updates</name>
+      <description>PingService must only start/stop monitoring for changed servers, preserving monitoring state for unchanged servers to meet NFR-P5 (&lt;5s monitoring gap requirement)</description>
+    </constraint>
+    <constraint>
+      <name>SSE Connection Preservation</name>
+      <description>Hot-reload must not drop existing SSE connections. Config reload happens in-process without Express server restart.</description>
+    </constraint>
+    <constraint>
+      <name>Performance Requirements</name>
+      <description>Configuration reload must complete within 2 seconds (NFR-P2). Use efficient JSON parsing and minimal service disruption.</description>
+    </constraint>
+    <constraint>
+      <name>Atomic File Integration</name>
+      <description>ConfigManager must integrate with existing writeConfigAtomic utility in backend/src/utils/fileUtils.ts for consistent file operations.</description>
+    </constraint>
+    <constraint>
+      <name>Error Handling Pattern</name>
+      <description>Follow existing error handling patterns: log errors with timestamps, return ApiResponse&lt;T&gt; format, never crash backend process.</description>
+    </constraint>
+    <constraint>
+      <name>Logging Standards</name>
+      <description>Use structured logging with timestamps and context objects, following patterns in existing config endpoints.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>ConfigManager Event Emitter</name>
+      <kind>EventEmitter Pattern</kind>
+      <signature>class ConfigManager extends EventEmitter {
+  // Reload methods
+  public async reloadServers(): Promise&lt;void&gt;
+  public async reloadGroups(): Promise&lt;void&gt;
+
+  // Event emissions
+  emit('servers-changed', servers: ServerConfig[]): boolean;
+  emit('groups-changed', groups: GroupConfig[]): boolean;
+}</signature>
+      <path>backend/src/services/ConfigManager.ts</path>
+    </interface>
+    <interface>
+      <name>PingService Delta Update</name>
+      <kind>Service Method</kind>
+      <signature>public onConfigChange(newServers: ServerConfig[]): Promise&lt;void&gt; {
+  const added = newServers.filter(s => !currentServers.has(s.id))
+  const removed = currentServers.filter(s => !newServers.has(s.id))
+  const updated = newServers.filter(s => hasChanged(s))
+
+  removed.forEach(s => stopMonitoring(s.id))
+  added.forEach(s => startMonitoring(s))
+  updated.forEach(s => updateMonitoring(s))
+}</signature>
+      <path>backend/src/services/pingService.ts</path>
+    </interface>
+    <interface>
+      <name>Config Endpoint Integration</name>
+      <kind>API Integration</kind>
+      <signature>// After successful writeConfigAtomic in POST/PUT/DELETE endpoints
+await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+configManager.emit('servers-changed', servers); // NEW: Trigger hot-reload</signature>
+      <path>backend/src/routes/config.ts</path>
+    </interface>
+    <interface>
+      <name>SSE Event Broadcasting</name>
+      <kind>Event Type Extension</kind>
+      <signature>// New SSE event types to add to existing /api/events endpoint
+{ type: 'serverAdded', server: ServerConfig }
+{ type: 'serverRemoved', serverId: string }
+{ type: 'serverUpdated', server: ServerConfig }
+{ type: 'groupsChanged', groups: GroupConfig[] }</signature>
+      <path>backend/src/routes/events.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Testing uses manual validation based on story acceptance criteria. No automated test framework currently configured in backend (testing dependencies not installed). Focus on end-to-end manual testing of hot-reload functionality, verifying SSE connection stability, and measuring reload performance (&lt;2 seconds requirement).</standards>
+    <locations>No dedicated test directories found in project structure. Manual testing should be performed by:
+1. Starting backend with existing server monitoring
+2. Making configuration changes via API endpoints
+3. Verifying SSE connections remain active
+4. Checking that new servers start monitoring within 5 seconds
+5. Confirming deleted servers stop monitoring immediately
+6. Measuring total reload time to ensure &lt;2 second requirement</locations>
+    <ideas>
+      <test>
+        <ac>1, 2</ac>
+        <idea>Test configuration reload detection by modifying servers.json file manually and verifying ConfigManager detects and reloads changes without process restart</idea>
+      </test>
+      <test>
+        <ac>3</ac>
+        <idea>Verify SSE connection preservation by keeping dashboard open during configuration changes and confirming real-time updates continue without reconnection</idea>
+      </test>
+      <test>
+        <ac>4</ac>
+        <idea>Test PingService dynamic updates by adding a new server via API and confirming monitoring starts within 5 seconds while existing servers continue uninterrupted</idea>
+      </test>
+      <test>
+        <ac>4</ac>
+        <idea>Test server deletion by removing a server via API and verifying monitoring stops immediately while other servers continue normally</idea>
+      </test>
+      <test>
+        <ac>5</ac>
+        <idea>Performance test reload speed by measuring time from configuration file change to complete server list update, ensuring it completes within 2 seconds</idea>
+      </test>
+      <test>
+        <ac>6</ac>
+        <idea>Test error handling by creating invalid configuration files and verifying backend remains operational with last valid configuration</idea>
+      </test>
+      <test>
+        <ac>7</ac>
+        <idea>Test integration points by using existing config endpoints (POST/PUT/DELETE) and confirming hot-reload triggers automatically after successful operations</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

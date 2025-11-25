@@ -629,11 +629,5 @@
     "ip": "192.168.77.77",
     "dns": "updated-test-final.eada.es",
     "id": "server-002"
-  },
-  {
-    "name": "Debug Test Server",
-    "ip": "192.168.100.101",
-    "dnsAddress": "debug.local",
-    "id": "server-001"
   }
 ]

@@ -28,8 +28,8 @@ export function validateServerConfig(config: any): ValidationErrors | null {
     errors.ip = 'IP address is required';
   }
 
-  if (!config.dns || typeof config.dns !== 'string' || config.dns.trim() === '') {
-    errors.dns = 'DNS address is required';
+  if (!config.dnsAddress || typeof config.dnsAddress !== 'string' || config.dnsAddress.trim() === '') {
+    errors.dnsAddress = 'DNS address is required';
   }
 
   // IP format validation
@@ -44,8 +44,8 @@ export function validateServerConfig(config: any): ValidationErrors | null {
   }
 
   // DNS length
-  if (config.dns && config.dns.length > 100) {
-    errors.dns = 'DNS address must be 100 characters or less';
+  if (config.dnsAddress && config.dnsAddress.length > 100) {
+    errors.dnsAddress = 'DNS address must be 100 characters or less';
   }
 
   // Numeric ranges: consecutiveSuccesses

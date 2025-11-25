@@ -2,13 +2,14 @@
   "groups": [
     {
       "id": "group-1",
-      "name": "ARAGÓ",
+      "name": "ARAGÓ UPDATED",
       "order": 1,
       "serverIds": [
-        "server-001",
         "server-002",
         "server-003",
-        "server-004"
+        "server-004",
+        "server-009",
+        "server-010"
       ]
     },
     {
@@ -20,6 +21,12 @@
         "server-006",
         "server-007"
       ]
+    },
+    {
+      "id": "group-3",
+      "name": "Test SSE Group",
+      "order": 1,
+      "serverIds": []
     }
   ]
 }

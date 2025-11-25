@@ -1,0 +1,226 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>1</storyId>
+    <title>Create Group Edit Form Layout</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-1-create-group-edit-form-layout.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>create and edit groups through a form layout in the main panel</iWant>
+    <soThat>I can organize servers into logical dashboard groups</soThat>
+    <tasks>- Create GroupForm component structure (AC: 1, 2)
+  - Set up component with PanelHeader from established patterns
+  - Configure form to render in main panel using ConfigPage layout
+- Implement basic form fields (AC: 3)
+  - Add group name input with shadcn/ui Input component
+  - Implement validation for required and unique group names
+  - Add error display for validation failures
+- Build server assignment interface (AC: 4)
+  - Create multi-select component using shadcn/ui Select or Checkbox
+  - Display server name and IP address in assignment options
+  - Implement server selection/deselection functionality
+- Implement form action buttons (AC: 5)
+  - Add Save and Cancel buttons to PanelHeader
+  - Wire Save button to group creation/update API endpoint
+  - Wire Cancel button to return to sidebar selection state
+- Add form states and UX polish (AC: 6, 7)
+  - Implement empty state with helpful placeholder text
+  - Add loading spinner during API operations
+  - Add success/error toast notifications
+- Set up form validation and integration (AC: 3, 4, 5)
+  - Implement form validation with React Hook Form
+  - Connect form to group API endpoints (POST/PUT /api/config/groups)
+  - Add form state management for create vs edit modes
+  - Test form submission and error handling</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Form Layout**: Group form renders in main panel following established split-view layout pattern from Epic 1
+2. **Form Structure**: Form includes PanelHeader with "Add Group" / "Edit Group" title and Save/Cancel buttons
+3. **Basic Fields**: Form contains group name input field with validation for required and unique names
+4. **Server Assignment**: Form includes multi-select interface for assigning servers to groups with server name and IP display
+5. **Form Actions**: Save button creates/updates groups, Cancel button returns to sidebar selection state
+6. **Empty State**: Form shows empty state with placeholder text when creating new groups
+7. **Loading State**: Form shows loading indicator during API operations for better UX</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+        <title>Epic Technical Specification: Group Management</title>
+        <section>Data Models and Contracts</section>
+        <snippet>Interface GroupConfig { id: string, name: string, order: number, serverIds: string[] }</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+        <title>Epic Technical Specification: Group Management</title>
+        <section>APIs and Interfaces</section>
+        <snippet>Group Management Endpoints: GET /api/config/groups, POST /api/config/groups, PUT /api/config/groups/:id, DELETE /api/config/groups/:id</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+        <title>Epic Technical Specification: Group Management</title>
+        <section>System Architecture Alignment</section>
+        <snippet>UI Components: Reuses established form patterns from server management (FormSection, FormGroup, PanelHeader)</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/components/config/PanelHeader.tsx</path>
+        <kind>component</kind>
+        <symbol>PanelHeader</symbol>
+        <lines>13-56</lines>
+        <reason>Reusable component with title, Save/Cancel buttons, loading states, and dirty indicators - perfect for group form header</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/forms/shared/FormSection.tsx</path>
+        <kind>component</kind>
+        <symbol>FormSection</symbol>
+        <lines>8-15</lines>
+        <reason>Container component for form sections with consistent styling - use for group name and server assignment sections</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/forms/shared/FormGroup.tsx</path>
+        <kind>component</kind>
+        <symbol>FormGroup</symbol>
+        <reason>Layout component for form field groups - use for organizing form controls</reason>
+      </artifact>
+      <artifact>
+        <path>src/services/api.ts</path>
+        <kind>service</kind>
+        <symbol>configApi</symbol>
+        <lines>253-339</lines>
+        <reason>Existing API patterns for server configuration - follow same patterns for group API endpoints</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/input.tsx</path>
+        <kind>component</kind>
+        <symbol>Input</symbol>
+        <reason>shadcn/ui input component for group name field</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/select.tsx</path>
+        <kind>component</kind>
+        <symbol>Select</symbol>
+        <reason>shadcn/ui select component for server assignment multi-select</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/checkbox.tsx</path>
+        <kind>component</kind>
+        <symbol>Checkbox</symbol>
+        <reason>shadcn/ui checkbox component alternative for server assignment</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/button.tsx</path>
+        <kind>component</kind>
+        <symbol>Button</symbol>
+        <reason>shadcn/ui button component for Save/Cancel actions</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ui/toast.tsx</path>
+        <kind>component</kind>
+        <symbol>toast</symbol>
+        <reason>shadcn/ui toast component for success/error notifications</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>component</kind>
+        <symbol>MainPanel</symbol>
+        <reason>Main panel layout component where group form will be rendered</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@radix-ui/react-select" version="^2.2.6" />
+        <package name="@radix-ui/react-checkbox" version="^1.3.3" />
+        <package name="@radix-ui/react-toast" version="^1.2.15" />
+        <package name="@radix-ui/react-label" version="^2.1.8" />
+        <package name="@radix-ui/react-slot" version="^1.2.4" />
+        <package name="class-variance-authority" version="^0.7.1" />
+        <package name="clsx" version="^2.1.1" />
+        <package name="lucide-react" version="^0.554.0" />
+        <package name="react" version="^18.2.0" />
+        <package name="react-dom" version="^18.2.0" />
+        <package name="react-hook-form" reason="Required for form validation and state management" />
+        <package name="tailwind-merge" version="^3.4.0" />
+        <package name="tailwindcss-animate" version="^1.0.7" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Follow split-view layout pattern where sidebar shows groups list and main panel shows selected group form</constraint>
+    <constraint>Use established patterns from Epic 2 server management forms (FormSection, FormGroup, PanelHeader components)</constraint>
+    <constraint>Use shadcn/ui components consistent with existing UI: Input, Button, Select, Checkbox for consistency</constraint>
+    <constraint>Implement form validation following Epic 2 patterns with inline error display and toast notifications</constraint>
+    <constraint>API integration follows established patterns from server management with proper error handling</constraint>
+    <constraint>Frontend components in src/components/groups/ directory following established naming: GroupForm.tsx, GroupForm.types.ts</constraint>
+    <constraint>API service functions in src/services/groups/ directory</constraint>
+    <constraint>Integration with existing ConfigPage layout in src/components/config/ConfigPage.tsx</constraint>
+    <constraint>Server assignment should display existing servers from current configuration via GET /api/config/servers</constraint>
+    <constraint>Group name validation should check uniqueness against existing groups via GET /api/config/groups</constraint>
+    <constraint>Form should handle both create mode (empty fields) and edit mode (pre-filled with existing group data)</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>POST /api/config/groups</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /api/config/groups - Create new group with auto-generated ID</signature>
+      <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+    </interface>
+    <interface>
+      <name>PUT /api/config/groups/:id</name>
+      <kind>REST endpoint</kind>
+      <signature>PUT /api/config/groups/:id - Update group name, order, or server assignments</signature>
+      <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+    </interface>
+    <interface>
+      <name>GET /api/config/groups</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /api/config/groups - Get all groups with server assignments</signature>
+      <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+    </interface>
+    <interface>
+      <name>GET /api/config/servers</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /api/config/servers - Get existing servers for assignment interface</signature>
+      <path>src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>GroupConfig</name>
+      <kind>interface</kind>
+      <signature>interface GroupConfig { id: string; name: string; order: number; serverIds: string[]; }</signature>
+      <path>docs/sprint-artifacts/tech-spec-epic-3.md</path>
+    </interface>
+    <interface>
+      <name>PanelHeaderProps</name>
+      <kind>interface</kind>
+      <signature>interface PanelHeaderProps { title: string; onDelete?: () => void; onCancel: () => void; onSave: () => void; isDirty?: boolean; hasErrors?: boolean; isLoading?: boolean; }</signature>
+      <path>src/components/config/PanelHeader.tsx</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>Testing follows BMad Method with Quick Flow track - no formal test framework setup required for this story. Focus on manual testing of form functionality and API integration. Unit tests can be added later following established patterns from server management forms.</standards>
+    <locations>src/components/groups/__tests__/ (create directory for group component tests)</locations>
+    <ideas>
+      <test idea="Form renders correctly in main panel with proper layout" acceptanceCriteriaId="1" />
+      <test idea="PanelHeader displays correct title ('Add Group' vs 'Edit Group')" acceptanceCriteriaId="2" />
+      <test idea="Group name input field accepts text input" acceptanceCriteriaId="3" />
+      <test idea="Group name validation prevents empty names" acceptanceCriteriaId="3" />
+      <test idea="Group name validation prevents duplicate names" acceptanceCriteriaId="3" />
+      <test idea="Server assignment multi-select shows server names and IPs" acceptanceCriteriaId="4" />
+      <test idea="Server assignment allows selecting/deselecting multiple servers" acceptanceCriteriaId="4" />
+      <test idea="Save button creates new group via POST API" acceptanceCriteriaId="5" />
+      <test idea="Save button updates existing group via PUT API" acceptanceCriteriaId="5" />
+      <test idea="Cancel button returns to sidebar selection state" acceptanceCriteriaId="5" />
+      <test idea="Empty state shows placeholder text for new groups" acceptanceCriteriaId="6" />
+      <test idea="Loading indicator appears during API operations" acceptanceCriteriaId="7" />
+      <test idea="Success toast shows on successful group creation/update" acceptanceCriteriaId="7" />
+      <test idea="Error toast shows on API failures" acceptanceCriteriaId="7" />
+    </ideas>
+  </tests>
+</story-context>

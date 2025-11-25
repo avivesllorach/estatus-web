@@ -1,0 +1,118 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>7</storyId>
+    <title>Implement Group Name Validation</title>
+    <status>drafted</status>
+    <generatedAt>2025-01-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-7-implement-group-name-validation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see validation errors for invalid group names</iWant>
+    <soThat>I can correct mistakes before saving</soThat>
+    <tasks>- [ ] Implement frontend validation for Group Name field (AC: 1, 2, 4)
+  - [ ] Add required field validation on blur
+  - [ ] Add uniqueness validation (case-insensitive)
+  - [ ] Display inline validation messages
+- [ ] Integrate validation with form state (AC: 3)
+  - [ ] Disable Save button when validation errors exist
+  - [ ] Enable Save button only when form is valid
+- [ ] Add backend validation for group name uniqueness (AC: 2)
+  - [ ] Extend group validation service
+  - [ ] Return proper error responses for duplicate names
+- [ ] Test validation scenarios (AC: 1, 2, 3, 4)
+  - [ ] Test empty group name
+  - [ ] Test duplicate group name (case variations)
+  - [ ] Test valid group names
+  - [ ] Test Save button state changes</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Given** I am editing or adding a group
+**When** I blur the Group Name field with empty value
+**Then** I see error: "Group name is required"
+
+2. **And** when I blur with a duplicate name (case-insensitive check)
+**Then** I see error: "Group name '[name]' already exists"
+
+3. **And** the Save button is disabled while validation errors exist
+
+4. **And** error messages appear inline below the field (red text, 12px)</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3.md" title="Epic 3 Technical Specification" section="Data Models and Contracts">
+        <snippet>GroupConfig interface includes id, name, order, and serverIds fields. Group names must be unique across all groups.</snippet>
+      </doc>
+      <doc path="docs/epics.md" title="Epic Breakdown" section="Story 3.7">
+        <snippet>Story 3.7 focuses on group name validation with required field validation, case-insensitive uniqueness checking, and inline error messages.</snippet>
+      </doc>
+      <doc path="docs/epics.md" title="Epic Breakdown" section="Story 2.3">
+        <snippet>Form validation patterns established: validation on blur, inline error messages, disabled Save button while errors exist.</snippet>
+      </doc>
+      <doc path="docs/epics.md" title="Epic Breakdown" section="Story 3.1">
+        <snippet>Group form structure includes Group Name field using FormSection and FormGroup components.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact path="src/components/groups/GroupForm.tsx" kind="component" symbol="GroupForm" lines="1-50" reason="Main group form component that needs validation integration">
+        <snippet>GroupForm component with form structure and state management</snippet>
+      </artifact>
+      <artifact path="backend/src/services/GroupService.ts" kind="service" symbol="GroupService" lines="1-100" reason="Backend service for group operations, needs validation extension">
+        <snippet>Service handling group CRUD operations with existing validation patterns</snippet>
+      </artifact>
+      <artifact path="backend/src/routes/config.ts" kind="route" symbol="groupRoutes" lines="50-100" reason="API endpoints for group management, needs validation updates">
+        <snippet>Express routes for POST /api/config/groups and PUT /api/config/groups/:id</snippet>
+      </artifact>
+      <artifact path="src/components/ui/input.tsx" kind="component" symbol="Input" lines="1-30" reason="shadcn/ui Input component for form fields">
+        <snippet>Input component with validation support and styling</snippet>
+      </artifact>
+      <artifact path="src/components/ui/toast.tsx" kind="component" symbol="Toast" lines="1-20" reason="Toast component for validation error feedback">
+        <snippet>Toast notification component for displaying validation errors</snippet>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="react" version="^18.0.0" />
+        <package name="react-hook-form" version="^7.0.0" />
+        <package name="@radix-ui/react-form" version="^0.0.3" />
+        <package name="class-variance-authority" version="^0.7.0" />
+        <package name="clsx" version="^2.0.0" />
+        <package name="tailwind-merge" version="^2.0.0" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint name="Form Validation Pattern" description="Validation must occur on blur event, not on every keystroke" />
+    <constraint name="Error Display" description="Use inline ValidationMessage component with red text and 12px font size" />
+    <constraint name="Accessibility" description="Fields with errors must have aria-invalid='true' attribute for screen readers" />
+    <constraint name="Component Reuse" description="Reuse existing ValidationMessage component from Epic 2 server forms" />
+    <constraint name="Backend Validation" description="Case-insensitive uniqueness check against all groups in dashboard-layout.json" />
+    <constraint name="Form State" description="Save button disabled when validation errors exist, enabled only when form is valid" />
+  </constraints>
+
+  <interfaces>
+    <interface name="GroupForm Validation" kind="component-interface" signature="(name: string) => { isValid: boolean; errors: { name?: string } }" path="src/components/groups/GroupForm.tsx" />
+    <interface name="GroupService.validateUniqueName" kind="service-method" signature="validateUniqueName(name: string, excludeId?: string): Promise<boolean>" path="backend/src/services/GroupService.ts" />
+    <interface name="POST /api/config/groups" kind="rest-endpoint" signature="POST /api/config/groups - Creates new group with validation" path="backend/src/routes/config.ts" />
+    <interface name="PUT /api/config/groups/:id" kind="rest-endpoint" signature="PUT /api/config/groups/:id - Updates group with validation" path="backend/src/routes/config.ts" />
+  </interfaces>
+
+  <tests>
+    <standards>Tests should follow established patterns from Epic 2 validation testing. Use Jest for unit tests and React Testing Library for component testing. Test validation on blur events, error message display, and Save button state changes.</standards>
+    <locations>
+      <location>src/components/groups/__tests__/GroupForm.test.tsx</location>
+      <location>backend/src/services/__tests__/GroupService.test.ts</location>
+      <location>backend/src/routes/__tests__/config.test.ts</location>
+    </locations>
+    <ideas>
+      <test ac="1">Test empty group name validation on blur</test>
+      <test ac="2">Test case-insensitive duplicate name detection</test>
+      <test ac="3">Test Save button disabled state with validation errors</test>
+      <test ac="4">Test inline error message display and styling</test>
+    </ideas>
+  </tests>
+</story-context>

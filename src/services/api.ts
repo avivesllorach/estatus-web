@@ -45,10 +45,13 @@ interface DiskUpdate {
 }
 
 interface EventMessage {
-  type: 'connected' | 'initial' | 'statusChange' | 'diskUpdate' | 'heartbeat';
+  type: 'connected' | 'initial' | 'statusChange' | 'diskUpdate' | 'heartbeat' | 'serverAdded' | 'serverUpdated' | 'serverRemoved' | 'groupsChanged';
   message?: string;
   servers?: ServerData[];
   update?: StatusUpdate | DiskUpdate;
+  server?: ServerConfig;
+  serverId?: string;
+  groups?: GroupConfig[];
   timestamp?: string;
 }
 
@@ -57,6 +60,7 @@ const API_BASE_URL = '/api';
 export class ApiService {
   private eventSource: EventSource | null = null;
   private onStatusUpdateCallback: ((servers: ServerData[]) => void) | null = null;
+  private onGroupsUpdateCallback: ((groups: GroupConfig[]) => void) | null = null;
   private servers: Map<string, ServerData> = new Map();
 
   async fetchServers(): Promise<ServerData[]> {
@@ -96,8 +100,9 @@ export class ApiService {
     }
   }
 
-  connectToStatusUpdates(onUpdate: (servers: ServerData[]) => void): void {
+  connectToStatusUpdates(onUpdate: (servers: ServerData[]) => void, onGroupsUpdate?: (groups: GroupConfig[]) => void): void {
     this.onStatusUpdateCallback = onUpdate;
+    this.onGroupsUpdateCallback = onGroupsUpdate || null;
 
     // Close existing connection
     if (this.eventSource) {
@@ -199,6 +204,78 @@ export class ApiService {
         }
         break;
 
+      case 'serverAdded':
+        if (message.server) {
+          // Convert ServerConfig to ServerData and add to local map
+          const newServer: ServerData = {
+            id: message.server.id,
+            name: message.server.name,
+            ip: message.server.ip,
+            isOnline: false, // New servers start as offline until monitoring starts
+            consecutiveSuccesses: message.server.consecutiveSuccesses || 0,
+            consecutiveFailures: message.server.consecutiveFailures || 0,
+            lastChecked: new Date().toISOString(),
+            lastStatusChange: new Date().toISOString(),
+            diskInfo: null,
+          };
+          this.servers.set(message.server.id, newServer);
+
+          // Notify callback with updated data
+          if (this.onStatusUpdateCallback) {
+            this.onStatusUpdateCallback(Array.from(this.servers.values()));
+          }
+
+          console.log(`Server added: ${newServer.name} (${newServer.ip})`);
+        }
+        break;
+
+      case 'serverUpdated':
+        if (message.server) {
+          // Update existing server in local map
+          const existingServer = this.servers.get(message.server.id);
+          if (existingServer) {
+            existingServer.name = message.server.name;
+            existingServer.ip = message.server.ip;
+            this.servers.set(message.server.id, existingServer);
+
+            // Notify callback with updated data
+            if (this.onStatusUpdateCallback) {
+              this.onStatusUpdateCallback(Array.from(this.servers.values()));
+            }
+
+            console.log(`Server updated: ${existingServer.name} (${existingServer.ip})`);
+          }
+        }
+        break;
+
+      case 'serverRemoved':
+        if (message.serverId) {
+          // Remove server from local map
+          const removedServer = this.servers.get(message.serverId);
+          if (removedServer) {
+            this.servers.delete(message.serverId);
+
+            // Notify callback with updated data
+            if (this.onStatusUpdateCallback) {
+              this.onStatusUpdateCallback(Array.from(this.servers.values()));
+            }
+
+            console.log(`Server removed: ${removedServer.name} (${message.serverId})`);
+          }
+        }
+        break;
+
+      case 'groupsChanged':
+        if (message.groups) {
+          // Notify groups callback with updated data
+          if (this.onGroupsUpdateCallback) {
+            this.onGroupsUpdateCallback(message.groups);
+          }
+
+          console.log('Groups configuration changed:', message.groups);
+        }
+        break;
+
       case 'heartbeat':
         // Keep-alive message, no action needed
         break;
@@ -214,11 +291,28 @@ export class ApiService {
       this.eventSource = null;
     }
     this.onStatusUpdateCallback = null;
+    this.onGroupsUpdateCallback = null;
     console.log('Disconnected from server status stream');
   }
 
   getServers(): ServerData[] {
     return Array.from(this.servers.values());
+  }
+
+  async fetchGroups(): Promise<GroupConfig[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/groups`);
+      const result: ApiResponse<GroupConfig[]> = await response.json();
+
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch groups');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      throw error;
+    }
   }
 }
 
@@ -400,6 +494,35 @@ export const configApi = {
       return result.data;
     } catch (error) {
       console.error(`Error updating group ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete group configuration with server reassignment
+   */
+  async deleteGroup(id: string, reassignStrategy: 'unassign' | 'default' = 'unassign'): Promise<{ deletedId: string; reassignedServers: string[] }> {
+    try {
+      const url = new URL(`${API_BASE_URL}/config/groups/${id}`, window.location.origin);
+      url.searchParams.set('reassign', reassignStrategy);
+
+      const response = await fetch(url.toString(), {
+        method: 'DELETE',
+      });
+
+      const result: ApiResponse<{ deletedId: string; reassignedServers: string[] }> = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete group');
+      }
+
+      if (!result.data) {
+        throw new Error('Group deletion succeeded but no data returned');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error(`Error deleting group ${id}:`, error);
       throw error;
     }
   },

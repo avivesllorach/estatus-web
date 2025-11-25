@@ -8,6 +8,7 @@ interface DiskInfo {
 }
 
 interface ServerData {
+  id: string;
   name: string;
   ip: string;
   isOnline: boolean;
@@ -22,14 +23,16 @@ interface ServerContainerProps {
 
 export function ServerContainer({ title, servers, serverCount }: ServerContainerProps) {
   return (
-    <div className="bg-[#888b8d] border-2 border-[#888b8d] rounded-lg p-2">
+    <div className={`bg-[#888b8d] border-2 border-[#888b8d] rounded-lg p-2 dashboard-layout-change ${servers.length > 0 ? 'server-container-enter' : ''}`}>
       <h3 className="text-lg font-bold text-white mb-2 text-center">
         {title}
       </h3>
-      <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${serverCount}, 1fr)` }}>
-        {servers.map((server, index) => (
+      <div className={`grid gap-2 transition-all duration-500 ease-in-out server-card-enter`} style={{
+        gridTemplateColumns: `repeat(${serverCount || 1}, 1fr)`
+      }}>
+        {servers.map((server) => (
           <DeviceCard
-            key={`${server.ip}-${index}`}
+            key={server.id}
             name={server.name}
             ip={server.ip}
             isOnline={server.isOnline}

@@ -1,0 +1,148 @@
+<story-context id="3-6-implement-delete-group-with-server-reassignment" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>6</storyId>
+    <title>Implement Delete Group with Server Reassignment</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-6-implement-delete-group-with-server-reassignment.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>delete a group with guidance on handling assigned servers</iWant>
+    <soThat>I can clean up unused groups safely while maintaining organized dashboard layouts</soThat>
+    <tasks>Implement delete button handler in GroupForm panel header (AC: 1)
+- Add onClick handler to Delete button that triggers confirmation dialog
+- Pass current group data (name, server count) to confirmation dialog
+
+Create enhanced confirmation dialog component (AC: 2, 3)
+- Build DeleteGroupConfirmationDialog with conditional content based on server assignments
+- Implement standard confirmation for empty groups (title, message, buttons)
+- Implement enhanced confirmation for groups with servers (server count, reassignment options)
+- Add radio button selection for reassignment strategies
+- Handle "unassign" vs "default" option logic based on available groups
+
+Implement backend DELETE endpoint for groups (AC: 4, 5)
+- Create DELETE /api/config/groups/:id endpoint in backend/src/routes/config.ts
+- Parse reassign query parameter (unassign|default)
+- Implement server reassignment logic for both strategies
+- Update dashboard-layout.json atomically using existing writeConfigAtomic utility
+- Emit 'groups-changed' event for SSE broadcasting
+
+Integrate frontend delete functionality (AC: 6, 7)
+- Create handleDeleteGroup function in GroupForm component
+- Send DELETE request to backend with selected reassignment strategy
+- Handle success response and update UI (remove from sidebar, show empty state)
+- Show success toast notification with appropriate message based on servers reassigned
+- Trigger groups refresh in sidebar after successful deletion
+
+Implement comprehensive error handling (AC: 8)
+- Handle backend validation errors (invalid group ID, missing group)
+- Display error toast notifications with specific failure reasons
+- Prevent UI state changes on failed deletion (group remains selectable)
+- Maintain form state if user cancels deletion</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Delete Button Access**: When I click the "Delete" button in the group edit panel header, a confirmation dialog appears with proper title and message
+
+2. **Empty Group Confirmation**: If the group has NO assigned servers, I see standard confirmation dialog:
+   - Title: "Delete Group?"
+   - Message: "Remove group '[Group Name]' from dashboard configuration?"
+   - Buttons: [Cancel] [Delete Group]
+
+3. **Server Assignment Confirmation**: If the group HAS assigned servers, I see enhanced confirmation:
+   - Title: "Delete Group?"
+   - Message: "Group '[Group Name]' contains X servers. What should happen to them?"
+   - Options: Radio buttons for "Leave unassigned (no group)" and "Move to default group" (if default group exists)
+   - Buttons: [Cancel] [Delete Group]
+
+4. **Backend Delete Operation**: When I click "Delete Group", the frontend sends `DELETE /api/config/groups/:id?reassign=[option]` request with the selected reassignment strategy
+
+5. **Server Reassignment Logic**: The backend removes the group and handles server reassignment according to the selected strategy:
+   - "unassign": Removes server from all groups (servers become unassigned)
+   - "default": Moves servers to the first available group (if multiple groups exist)
+
+6. **Frontend Updates**: After successful deletion, the group disappears from the sidebar list and the main panel shows empty state
+
+7. **Success Feedback**: I see success toast notification: "✓ Group deleted, X servers reassigned" (or "✓ Group deleted" for empty groups)
+
+8. **Error Handling**: If the delete operation fails, I see error toast with specific failure reason and the group remains in the system</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3.md" title="Epic Technical Specification: Group Management" section="Group Deletion with Server Reassignment" snippet="Group deletion with server reassignment handling including backend DELETE endpoint implementation, atomic file operations, and referential integrity enforcement"/>
+      <doc path="docs/sprint-artifacts/3-4-implement-save-group-functionality-with-backend-api.md" title="Group Save Implementation" section="Backend APIs" snippet="Complete `/api/config/groups` CRUD operations implemented in backend/src/routes/config.ts:124-301 with atomic file writes and comprehensive validation"/>
+      <doc path="docs/architecture.md" title="System Architecture" section="Data Architecture" snippet="dashboard-layout.json structure and atomic write patterns for configuration persistence"/>
+      <doc path="docs/epics.md" title="Epic Breakdown" section="Epic 3: Dashboard Group Management" snippet="Complete group CRUD operations, server assignment interface, and referential integrity requirements"/>
+    </docs>
+    <code>
+      <artifact path="src/components/groups/GroupForm.tsx" kind="component" symbol="GroupForm" lines="103-803" reason="Main group management component with panel header that already supports onDelete prop (line 24, 488) for deletion functionality"/>
+      <artifact path="src/components/groups/GroupForm.tsx" kind="component" symbol="handleSaveExisting" lines="341-396" reason="Existing group save pattern for reference in implementing delete logic"/>
+      <artifact path="src/components/groups/GroupForm.tsx" kind="component" symbol="ServerItem" lines="35-74" reason="Server display component that shows server assignments within groups"/>
+      <artifact path="backend/src/routes/config.ts" kind="service" symbol="router.delete('/groups/:id')" lines="MISSING" reason="DELETE endpoint for groups needs to be implemented following existing POST/PUT patterns"/>
+      <artifact path="backend/src/routes/config.ts" kind="service" symbol="router.delete('/servers/:id')" lines="590-693" reason="Complete server deletion template including atomic writes, referential integrity, and error handling"/>
+      <artifact path="src/services/api.ts" kind="service" symbol="configApi.deleteGroup" lines="MISSING" reason="Frontend delete function needs to be implemented following deleteServer pattern"/>
+      <artifact path="src/services/api.ts" kind="service" symbol="configApi.deleteServer" lines="324-345" reason="Existing delete API pattern for implementing deleteGroup function"/>
+      <artifact path="src/components/config/MainPanel.tsx" kind="component" symbol="handleDeleteClick" lines="363-365" reason="Deletion confirmation dialog pattern from server management"/>
+      <artifact path="src/components/config/MainPanel.tsx" kind="component" symbol="handleConfirmDelete" lines="373-402" reason="Complete deletion execution pattern with loading states and toast notifications"/>
+      <artifact path="src/components/ui/toast.tsx" kind="component" symbol="Toast" lines="25-41" reason="Toast notification component with success and destructive variants"/>
+      <artifact path="src/hooks/use-toast.ts" kind="hook" symbol="useToast" lines="1-50" reason="Custom hook for showing success/error notifications"/>
+      <artifact path="backend/src/routes/events.ts" kind="service" symbol="onGroupsChanged" lines="64-70" reason="SSE event broadcasting for real-time group updates"/>
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="react" version="^18.2.0"/>
+        <package name="@radix-ui/react-dialog" version="^1.1.15"/>
+        <package name="@radix-ui/react-toast" version="^1.2.15"/>
+        <package name="lucide-react" version="^0.554.0"/>
+        <package name="react-router-dom" version="^7.9.6"/>
+        <package name="tailwind-merge" version="^3.4.0"/>
+      </frontend>
+      <backend>
+        <package name="express" version="^4.18.2"/>
+        <package name="cors" version="^2.8.5"/>
+        <package name="typescript" version="^5.3.3"/>
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <rule>Must reuse existing GroupForm component structure and panel header pattern</rule>
+    <rule>Must follow atomic file write pattern using existing writeConfigAtomic utility</rule>
+    <rule>Must leverage existing SSE event broadcasting for 'groups-changed' events</rule>
+    <rule>Must use existing toast notification system for success/error feedback</rule>
+    <rule>Must follow server deletion pattern for backend DELETE endpoint implementation</rule>
+    <rule>Must maintain referential integrity - servers remain when groups are deleted</rule>
+    <rule>Must use shadcn/ui Dialog component for confirmation interface</rule>
+    <rule>Must provide radio button options for server reassignment strategy</rule>
+    <rule>Must handle both empty and populated group deletion scenarios</rule>
+    <rule>Must integrate with existing config API patterns and error handling</rule>
+  </constraints>
+
+  <interfaces>
+    <interface name="DELETE /api/config/groups/:id" kind="REST endpoint" signature="DELETE /api/config/groups/:id?reassign=unassign|default" path="backend/src/routes/config.ts"/>
+    <interface name="configApi.deleteGroup" kind="function" signature="async deleteGroup(id: string, reassignStrategy: string): Promise&lt;{deletedId: string, reassignedServers: string[]}&gt;" path="src/services/api.ts"/>
+    <interface name="DeleteGroupConfirmationDialog" kind="component" signature="DeleteGroupConfirmationDialog({group, onConfirm, onCancel})" path="src/components/groups/GroupForm.tsx"/>
+    <interface name="groupsChanged SSE Event" kind="event" signature="{type: 'groups-changed', groups: GroupConfig[]}" path="backend/src/routes/events.ts"/>
+  </interfaces>
+
+  <tests>
+    <standards>Tests should follow existing patterns: component testing with React Testing Library for UI components, integration testing for API endpoints, and end-to-end testing for complete user workflows. All tests should verify both empty group deletion and populated group deletion with server reassignment scenarios.</standards>
+    <locations>Frontend tests in src/components/groups/ (GroupForm.test.tsx), backend tests in tests/routes/ (config.test.ts), integration tests in tests/integration/</locations>
+    <ideas>
+      <test ac="1" idea="Test delete button triggers confirmation dialog with correct group data"/>
+      <test ac="2" idea="Test empty group confirmation dialog displays correct title, message, and buttons"/>
+      <test ac="3" idea="Test populated group confirmation dialog shows server count and reassignment options"/>
+      <test ac="4" idea="Test DELETE endpoint with invalid group ID returns 404 error"/>
+      <test ac="5" idea="Test server reassignment logic: 'unassign' removes servers from all groups"/>
+      <test ac="5" idea="Test server reassignment logic: 'default' moves servers to first available group"/>
+      <test ac="6" idea="Test frontend updates: group removed from sidebar and empty state shown"/>
+      <test ac="7" idea="Test success toast notifications with appropriate message content"/>
+      <test ac="8" idea="Test error handling: failed deletion shows error toast and preserves group"/>
+      <test idea="Test SSE events: groupsChanged event broadcast on successful deletion"/>
+      <test idea="Test referential integrity: servers remain in system after group deletion"/>
+    </ideas>
+  </tests>
+</story-context>

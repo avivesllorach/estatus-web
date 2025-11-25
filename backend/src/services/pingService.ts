@@ -406,4 +406,272 @@ export class PingService extends EventEmitter {
   public getOnlineCount(): number {
     return Array.from(this.serverStatusMap.values()).filter(server => server.isOnline).length;
   }
+
+  /**
+   * Add new servers to monitor - part of hot-reload functionality
+   * Preserves existing monitoring for unchanged servers
+   */
+  public async addServers(newServers: ServerConfig[]): Promise<void> {
+    console.log(`🔧 Adding ${newServers.length} new servers to monitoring...`);
+
+    // Update the servers array with new servers
+    this.servers = [...this.servers, ...newServers];
+
+    // Initialize server status for new servers
+    newServers.forEach(server => {
+      const initialStatus: ServerStatus = {
+        id: server.id,
+        name: server.name,
+        ip: server.ip,
+        isOnline: false, // Start as offline until first successful ping
+        consecutiveSuccesses: 0,
+        consecutiveFailures: 0,
+        lastChecked: new Date(),
+        lastStatusChange: new Date(),
+        diskInfo: null
+      };
+      this.serverStatusMap.set(server.id, initialStatus);
+    });
+
+    // Start monitoring for new servers only
+    newServers.forEach(server => {
+      const pingPromise = this.continuousPing(server.id);
+      this.pingPromises.set(server.id, pingPromise);
+
+      // Start SNMP disk monitoring if enabled
+      if (server.snmp?.enabled) {
+        const diskCount = server.snmp.disks?.length || server.snmp.storageIndexes?.length || 0;
+        console.log(`📊 Starting SNMP monitoring for ${server.name} (${diskCount} disks)`);
+
+        // Initial disk check
+        this.checkDiskStatus(server.id);
+
+        // Set up recurring SNMP checks
+        const snmpInterval = setInterval(() => {
+          this.checkDiskStatus(server.id);
+        }, SNMP_INTERVAL);
+
+        this.snmpIntervals.set(server.id, snmpInterval);
+      }
+
+      // Start NetApp LUN monitoring if enabled
+      if (server.netapp?.enabled) {
+        const lunCount = server.netapp.luns?.length || 0;
+        console.log(`🗄️ Starting NetApp LUN monitoring for ${server.name} (${lunCount} LUNs)`);
+
+        // Initial LUN check
+        this.checkLunStatus(server.id);
+
+        // Set up recurring LUN checks
+        const lunInterval = setInterval(() => {
+          this.checkLunStatus(server.id);
+        }, SNMP_INTERVAL);
+
+        this.snmpIntervals.set(server.id + '_lun', lunInterval);
+      }
+    });
+
+    console.log(`✅ Successfully added ${newServers.length} servers to monitoring`);
+  }
+
+  /**
+   * Remove servers from monitoring - part of hot-reload functionality
+   * Preserves existing monitoring for remaining servers
+   */
+  public async removeServers(serverIdsToRemove: string[]): Promise<void> {
+    console.log(`🔧 Removing ${serverIdsToRemove.length} servers from monitoring...`);
+
+    // Stop monitoring for removed servers
+    serverIdsToRemove.forEach(serverId => {
+      // Clear ping promise
+      const pingPromise = this.pingPromises.get(serverId);
+      if (pingPromise) {
+        // Note: We can't directly cancel a Promise, but the continuousPing loop
+        // will check isRunning flag and exit naturally
+        this.pingPromises.delete(serverId);
+      }
+
+      // Clear SNMP intervals
+      const snmpInterval = this.snmpIntervals.get(serverId);
+      if (snmpInterval) {
+        clearInterval(snmpInterval);
+        this.snmpIntervals.delete(serverId);
+      }
+
+      // Clear NetApp LUN intervals
+      const lunInterval = this.snmpIntervals.get(serverId + '_lun');
+      if (lunInterval) {
+        clearInterval(lunInterval);
+        this.snmpIntervals.delete(serverId + '_lun');
+      }
+
+      // Remove from server status map
+      this.serverStatusMap.delete(serverId);
+
+      console.log(`🛑 Stopped monitoring server ${serverId}`);
+    });
+
+    // Update servers array to remove removed servers
+    this.servers = this.servers.filter(server => !serverIdsToRemove.includes(server.id));
+
+    console.log(`✅ Successfully removed ${serverIdsToRemove.length} servers from monitoring`);
+  }
+
+  /**
+   * Update existing servers configuration - part of hot-reload functionality
+   * Handles modified server configurations (IP changes, credential changes, etc.)
+   */
+  public async updateServers(updatedServers: ServerConfig[]): Promise<void> {
+    console.log(`🔧 Updating ${updatedServers.length} servers configuration...`);
+
+    // For each updated server, we need to restart monitoring with new config
+    updatedServers.forEach(updatedServer => {
+      const existingServerIndex = this.servers.findIndex(s => s.id === updatedServer.id);
+      if (existingServerIndex !== -1) {
+        // Stop old monitoring first
+        this.stopMonitoringForServer(updatedServer.id);
+
+        // Update server configuration
+        this.servers[existingServerIndex] = updatedServer;
+
+        // Reset server status (forces re-evaluation)
+        const existingStatus = this.serverStatusMap.get(updatedServer.id);
+        if (existingStatus) {
+          existingStatus.ip = updatedServer.ip;
+          existingStatus.name = updatedServer.name;
+          // Reset counters to force immediate re-evaluation
+          existingStatus.consecutiveSuccesses = 0;
+          existingStatus.consecutiveFailures = 0;
+          existingStatus.lastStatusChange = new Date();
+        } else {
+          // Create new status if not found (shouldn't happen but defensive)
+          const initialStatus: ServerStatus = {
+            id: updatedServer.id,
+            name: updatedServer.name,
+            ip: updatedServer.ip,
+            isOnline: false,
+            consecutiveSuccesses: 0,
+            consecutiveFailures: 0,
+            lastChecked: new Date(),
+            lastStatusChange: new Date(),
+            diskInfo: null
+          };
+          this.serverStatusMap.set(updatedServer.id, initialStatus);
+        }
+
+        // Start new monitoring with updated configuration
+        this.startMonitoringForServer(updatedServer);
+
+        console.log(`🔄 Updated monitoring for server ${updatedServer.name}`);
+      }
+    });
+
+    console.log(`✅ Successfully updated ${updatedServers.length} servers configuration`);
+  }
+
+  /**
+   * Stop monitoring for a specific server - helper method
+   */
+  private stopMonitoringForServer(serverId: string): void {
+    // Clear ping promise
+    this.pingPromises.delete(serverId);
+
+    // Clear SNMP intervals
+    const snmpInterval = this.snmpIntervals.get(serverId);
+    if (snmpInterval) {
+      clearInterval(snmpInterval);
+      this.snmpIntervals.delete(serverId);
+    }
+
+    // Clear NetApp LUN intervals
+    const lunInterval = this.snmpIntervals.get(serverId + '_lun');
+    if (lunInterval) {
+      clearInterval(lunInterval);
+      this.snmpIntervals.delete(serverId + '_lun');
+    }
+  }
+
+  /**
+   * Start monitoring for a specific server - helper method
+   */
+  private startMonitoringForServer(server: ServerConfig): void {
+    // Start continuous ping
+    const pingPromise = this.continuousPing(server.id);
+    this.pingPromises.set(server.id, pingPromise);
+
+    // Start SNMP monitoring if enabled
+    if (server.snmp?.enabled) {
+      const diskCount = server.snmp.disks?.length || server.snmp.storageIndexes?.length || 0;
+      console.log(`📊 Starting SNMP monitoring for ${server.name} (${diskCount} disks)`);
+
+      // Initial disk check
+      this.checkDiskStatus(server.id);
+
+      // Set up recurring SNMP checks
+      const snmpInterval = setInterval(() => {
+        this.checkDiskStatus(server.id);
+      }, SNMP_INTERVAL);
+
+      this.snmpIntervals.set(server.id, snmpInterval);
+    }
+
+    // Start NetApp LUN monitoring if enabled
+    if (server.netapp?.enabled) {
+      const lunCount = server.netapp.luns?.length || 0;
+      console.log(`🗄️ Starting NetApp LUN monitoring for ${server.name} (${lunCount} LUNs)`);
+
+      // Initial LUN check
+      this.checkLunStatus(server.id);
+
+      // Set up recurring LUN checks
+      const lunInterval = setInterval(() => {
+        this.checkLunStatus(server.id);
+      }, SNMP_INTERVAL);
+
+      this.snmpIntervals.set(server.id + '_lun', lunInterval);
+    }
+  }
+
+  /**
+   * Handle configuration changes from ConfigManager
+   * This is the main integration point for hot-reload functionality
+   */
+  public async onConfigChange(newServers: ServerConfig[]): Promise<void> {
+    console.log(`🔄 Processing configuration change for ${newServers.length} servers...`);
+
+    try {
+      const currentServerMap = new Map(this.servers.map(s => [s.id, s]));
+      const newServerMap = new Map(newServers.map(s => [s.id, s]));
+
+      const added = newServers.filter(s => !currentServerMap.has(s.id));
+      const removed = this.servers.filter(s => !newServerMap.has(s.id));
+      const updated = newServers.filter(s => {
+        const current = currentServerMap.get(s.id);
+        return current && JSON.stringify(current) !== JSON.stringify(s);
+      });
+
+      console.log(`📊 Configuration delta: +${added.length} added, -${removed.length} removed, ~${updated.length} updated`);
+
+      // Process removals first (stop monitoring)
+      if (removed.length > 0) {
+        await this.removeServers(removed.map(s => s.id));
+      }
+
+      // Process updates (restart monitoring with new config)
+      if (updated.length > 0) {
+        await this.updateServers(updated);
+      }
+
+      // Process additions (start new monitoring)
+      if (added.length > 0) {
+        await this.addServers(added);
+      }
+
+      console.log(`✅ Configuration change processed successfully`);
+
+    } catch (error) {
+      console.error(`❌ Error processing configuration change:`, error);
+      throw error;
+    }
+  }
 }
