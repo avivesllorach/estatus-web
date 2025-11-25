@@ -269,21 +269,7 @@ export class ConfigManager extends EventEmitter {
       const oldServer = oldServerMap.get(id);
       if (!oldServer) return true; // Server was added
 
-      // Optimized field-by-field comparison instead of JSON.stringify
-      if (oldServer.name !== newServer.name) return true;
-      if (oldServer.ip !== newServer.ip) return true;
-      if (oldServer.dnsAddress !== newServer.dnsAddress) return true;
-
-      // Compare SNMP configuration
-      if (oldServer.snmp?.enabled !== newServer.snmp?.enabled) return true;
-      if (JSON.stringify(oldServer.snmp?.disks || []) !== JSON.stringify(newServer.snmp?.disks || [])) return true;
-
-      // Compare NetApp configuration
-      if (oldServer.netapp?.enabled !== newServer.netapp?.enabled) return true;
-      if (oldServer.netapp?.apiType !== newServer.netapp?.apiType) return true;
-      if (oldServer.netapp?.username !== newServer.netapp?.username) return true;
-      if (oldServer.netapp?.password !== newServer.netapp?.password) return true;
-      if (JSON.stringify(oldServer.netapp?.luns || []) !== JSON.stringify(newServer.netapp?.luns || [])) return true;
+      if (this.hasServerChanged(oldServer, newServer)) return true;
     }
 
     return false;
@@ -305,7 +291,7 @@ export class ConfigManager extends EventEmitter {
       if (!oldGroup) return true; // Group was added
 
       if (oldGroup.name !== newGroup.name) return true;
-      if (JSON.stringify(oldGroup.serverIds || []) !== JSON.stringify(newGroup.serverIds || [])) return true;
+      if (!this.arraysEqual(oldGroup.serverIds || [], newGroup.serverIds || [], (a, b) => a === b)) return true;
       if (oldGroup.order !== newGroup.order) return true;
     }
 
@@ -340,6 +326,73 @@ export class ConfigManager extends EventEmitter {
       }
     }
 
+    // Find added and updated servers
+    for (const [id, newServer] of newServerMap) {
+      const oldServer = oldServerMap.get(id);
+      if (!oldServer) {
+        added.push(newServer);
+      } else if (this.hasServerChanged(oldServer, newServer)) {
+        updated.push(newServer);
+      }
+    }
+
+    // Find removed servers
+    for (const [id, oldServer] of oldServerMap) {
+      if (!newServerMap.has(id)) {
+        removed.push(oldServer);
+      }
+    }
+
     return { added, removed, updated };
+  }
+
+  /**
+   * Check if a single server configuration has changed
+   */
+  private hasServerChanged(oldServer: ServerConfig, newServer: ServerConfig): boolean {
+    // Optimized field-by-field comparison instead of JSON.stringify
+    if (oldServer.name !== newServer.name) return true;
+    if (oldServer.ip !== newServer.ip) return true;
+    if (oldServer.dnsAddress !== newServer.dnsAddress) return true;
+
+    // Compare SNMP configuration
+    if (oldServer.snmp?.enabled !== newServer.snmp?.enabled) return true;
+    if (!this.arraysEqual(oldServer.snmp?.disks || [], newServer.snmp?.disks || [], this.compareDisks)) return true;
+
+    // Compare NetApp configuration
+    if (oldServer.netapp?.enabled !== newServer.netapp?.enabled) return true;
+    if (oldServer.netapp?.apiType !== newServer.netapp?.apiType) return true;
+    if (oldServer.netapp?.username !== newServer.netapp?.username) return true;
+    if (oldServer.netapp?.password !== newServer.netapp?.password) return true;
+    if (!this.arraysEqual(oldServer.netapp?.luns || [], newServer.netapp?.luns || [], this.compareLuns)) return true;
+
+    return false;
+  }
+
+  /**
+   * Efficiently compare two arrays using a custom comparator function
+   */
+  private arraysEqual<T>(a: T[], b: T[], comparator: (itemA: T, itemB: T) => boolean): boolean {
+    if (a.length !== b.length) return false;
+
+    for (let i = 0; i < a.length; i++) {
+      if (!comparator(a[i], b[i])) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Compare two disk configurations
+   */
+  private compareDisks(diskA: any, diskB: any): boolean {
+    return diskA.index === diskB.index && diskA.name === diskB.name;
+  }
+
+  /**
+   * Compare two LUN configurations
+   */
+  private compareLuns(lunA: any, lunB: any): boolean {
+    return lunA.name === lunB.name && lunA.path === lunB.path;
   }
 }

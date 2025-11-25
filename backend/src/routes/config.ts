@@ -201,6 +201,18 @@ router.post('/groups', async (req: Request, res: Response) => {
     // Write updated layout atomically
     await writeConfigAtomic(CONFIG_PATHS.layout, layout);
 
+    // Trigger hot-reload after successful file write
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering hot-reload after group creation');
+        await configManager.reloadGroups();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger hot-reload after group creation:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
+
     console.info('[Config API] Group created successfully', {
       groupId: newGroupId,
       name: sanitizedGroupData.name,
@@ -331,6 +343,18 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
     // Write updated layout atomically
     await writeConfigAtomic(CONFIG_PATHS.layout, layout);
 
+    // Trigger hot-reload after successful file write
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering hot-reload after group update');
+        await configManager.reloadGroups();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger hot-reload after group update:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
+
     console.info('[Config API] Group updated successfully', {
       groupId: id,
       name: sanitizedGroupData.name,
@@ -355,6 +379,189 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
     const response: ApiResponse<never> = {
       success: false,
       error: 'Failed to save group configuration',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * DELETE /api/config/groups/:id
+ * Delete group configuration with server reassignment options
+ *
+ * Query params:
+ * - reassign: "unassign" | "default" - Strategy for handling assigned servers
+ *
+ * Response: ApiResponse<{ deletedId: string, reassignedServers: string[] }>
+ *
+ * Status codes:
+ * - 200: Success
+ * - 400: Invalid reassign strategy
+ * - 404: Group not found
+ * - 500: Server error
+ *
+ * Side effects:
+ * - Removes group from dashboard-layout.json
+ * - Handles server reassignment according to selected strategy
+ * - Emits groups-changed event for real-time updates
+ */
+router.delete('/groups/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const reassignStrategy = req.query.reassign as 'unassign' | 'default' | undefined;
+
+  try {
+    // Validate reassign strategy
+    if (reassignStrategy && !['unassign', 'default'].includes(reassignStrategy)) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid reassign strategy. Must be "unassign" or "default"',
+      };
+      return res.status(400).json(response);
+    }
+
+    // Read current dashboard-layout.json
+    let layout: { groups: GroupConfig[] };
+    try {
+      const fileContent = await fs.readFile(CONFIG_PATHS.layout, 'utf-8');
+      layout = JSON.parse(fileContent);
+
+      // Ensure groups array exists
+      if (!layout.groups || !Array.isArray(layout.groups)) {
+        layout.groups = [];
+      }
+    } catch (error) {
+      // File doesn't exist or is invalid
+      console.warn('[Config API] Layout file not found for group deletion', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'No groups found to delete',
+      };
+      return res.status(404).json(response);
+    }
+
+    // Find group by ID
+    const groupIndex = layout.groups.findIndex((g) => g.id === id);
+    if (groupIndex === -1) {
+      console.warn('[Config API] Group not found for deletion', {
+        groupId: id,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response: ApiResponse<never> = {
+        success: false,
+        error: `Group with ID '${id}' not found`,
+      };
+      return res.status(404).json(response);
+    }
+
+    const deletedGroup = layout.groups[groupIndex];
+    const serverIdsToReassign = deletedGroup.serverIds || [];
+
+    // Apply server reassignment strategy
+    let reassignedServers: string[] = [];
+    if (serverIdsToReassign.length > 0) {
+      if (reassignStrategy === 'unassign') {
+        // Strategy: "unassign" - servers become unassigned (removed from all groups)
+        console.info('[Config API] Unassigning servers from deleted group', {
+          groupId: id,
+          serverCount: serverIdsToReassign.length,
+          strategy: 'unassign',
+          timestamp: new Date().toISOString(),
+        });
+
+        // No action needed - servers will be removed when we delete the group
+        reassignedServers = serverIdsToReassign;
+
+      } else if (reassignStrategy === 'default') {
+        // Strategy: "default" - move servers to the first available group
+        const otherGroups = layout.groups.filter(g => g.id !== id);
+
+        if (otherGroups.length === 0) {
+          // No other groups exist, fall back to unassign
+          console.warn('[Config API] No other groups available for reassignment, using unassign strategy', {
+            groupId: id,
+            serverCount: serverIdsToReassign.length,
+            timestamp: new Date().toISOString(),
+          });
+          reassignedServers = serverIdsToReassign;
+        } else {
+          // Find the group with the lowest order value (first in display)
+          const targetGroup = otherGroups.reduce((prev, current) =>
+            (prev.order < current.order) ? prev : current
+          );
+
+          // Add servers to the target group (avoid duplicates)
+          const existingServerIds = new Set(targetGroup.serverIds || []);
+          const newServerIds = serverIdsToReassign.filter(id => !existingServerIds.has(id));
+          targetGroup.serverIds = [...(targetGroup.serverIds || []), ...newServerIds];
+
+          reassignedServers = serverIdsToReassign; // All servers were reassigned
+
+          console.info('[Config API] Servers reassigned to default group', {
+            groupId: id,
+            targetGroupId: targetGroup.id,
+            targetGroupName: targetGroup.name,
+            reassignedCount: newServerIds.length,
+            totalServers: serverIdsToReassign.length,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } else {
+        // No strategy specified, default to unassign
+        reassignedServers = serverIdsToReassign;
+      }
+    }
+
+    // Remove the group from array
+    layout.groups = layout.groups.filter(g => g.id !== id);
+
+    // Write updated layout atomically
+    await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+    console.info('[Config API] Group deleted successfully', {
+      groupId: id,
+      groupName: deletedGroup.name,
+      serverCount: serverIdsToReassign.length,
+      reassignedCount: reassignedServers.length,
+      strategy: reassignStrategy || 'unassign',
+      timestamp: new Date().toISOString(),
+    });
+
+    // Trigger ConfigManager groups-changed event for real-time updates
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering groups-changed event after group deletion');
+        await configManager.reloadGroups();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger groups-changed event after group deletion:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    // Return success with deletion details
+    const response: ApiResponse<{ deletedId: string; reassignedServers: string[] }> = {
+      success: true,
+      data: {
+        deletedId: id,
+        reassignedServers,
+      },
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('[Config API] Group deletion failed', {
+      groupId: id,
+      reassignStrategy,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to delete group',
     };
     res.status(500).json(response);
   }
@@ -544,7 +751,18 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     // Write updated array atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
 
-    
+    // Trigger hot-reload after successful file write
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering hot-reload after server update');
+        await configManager.reloadServers();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger hot-reload after server update:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
+
     console.info('[Config API] Server updated successfully', {
       serverId: id,
       name: serverData.name,
@@ -618,7 +836,18 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     // Write updated servers.json atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
 
-    
+    // Trigger hot-reload after successful file write
+    const configManager = (req as any).configManager as ConfigManager;
+    if (configManager) {
+      try {
+        console.log('[Config API] Triggering hot-reload after server deletion');
+        await configManager.reloadServers();
+      } catch (reloadError) {
+        console.error('[Config API] Failed to trigger hot-reload after server deletion:', reloadError);
+        // Don't fail the request, just log the error
+      }
+    }
+
     // Clean up group references (referential integrity)
     // Remove serverId from all groups in dashboard-layout.json
     try {
