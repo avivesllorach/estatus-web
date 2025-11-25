@@ -100,9 +100,9 @@ export function Sidebar({
             No servers configured yet
           </div>
         ) : (
-          <ScrollArea className="h-[calc(50vh-150px)]">
+          <ScrollArea className="h-[calc(50vh-150px)] scroll-area-smooth">
             <div
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-2 sidebar-section"
               role="list"
               aria-label="Server list"
               onKeyDown={handleServerKeyDown}
@@ -143,9 +143,9 @@ export function Sidebar({
             No groups created yet.
           </div>
         ) : (
-          <ScrollArea className="h-[calc(50vh-150px)]">
+          <ScrollArea className="h-[calc(50vh-150px)] scroll-area-smooth">
             <div
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-2 sidebar-section"
               role="list"
               aria-label="Group list"
               onKeyDown={handleGroupKeyDown}

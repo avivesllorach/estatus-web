@@ -1,0 +1,98 @@
+/* Smooth updates for configuration page */
+
+/* Prevent layout shift during server updates */
+.server-list-item {
+  transition: none; /* Disable transitions for immediate feedback */
+  contain: layout style paint; /* Optimize for frequent updates */
+}
+
+/* Maintain stable dimensions during updates */
+.server-list-item,
+.group-list-item {
+  min-height: 4rem; /* Consistent height prevents layout shifts */
+  contain: layout style paint;
+}
+
+/* Smooth fade-in for new items */
+.server-list-item.new,
+.group-list-item.new {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Smooth fade-out for removed items */
+.server-list-item.removing,
+.group-list-item.removing {
+  animation: fadeOut 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* Prevent visual disruption during updates */
+.sidebar-section {
+  contain: layout style paint;
+}
+
+/* Smooth status indicator updates */
+.status-indicator {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Prevent form field layout shifts */
+.form-field {
+  contain: layout style;
+  min-height: 5rem; /* Consistent field height */
+}
+
+/* Smooth background updates */
+.config-panel {
+  contain: layout style paint;
+}
+
+/* ScrollArea smooth scrolling */
+.scroll-area-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Preserve text selection during updates */
+.preserve-selection {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Prevent content jumping during loading */
+.loading-placeholder {
+  min-height: 4rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.375rem;
+}
+
+/* Stable focus rings */
+.focus-ring-stable {
+  transition: box-shadow 0.15s ease;
+}
+
+/* Prevent button size changes during state changes */
+.btn-stable {
+  min-width: 6rem;
+  contain: layout style paint;
+}
+
+/* Maintain table layout consistency */
+.data-table {
+  table-layout: fixed;
+  contain: layout style paint;
+}
+
+/* Smooth validation state changes */
+.validation-message {
+  transition: color 0.2s ease, opacity 0.2s ease;
+  min-height: 1.2rem; /* Prevent layout shifts when validation appears/disappears */
+}

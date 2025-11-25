@@ -1,0 +1,120 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>5</storyId>
+    <title>Implement Atomic File Writes for Data Integrity</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-5-implement-atomic-file-writes-for-data-integrity.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>backend service</asA>
+    <iWant>to write configuration files atomically</iWant>
+    <soThat>files are never corrupted even if the process crashes during save</soThat>
+    <tasks>- [ ] Task 1: Create atomic file write helper utility function (AC: 1,2,3,4,5,6,7,8)
+  - [ ] Implement writeConfigAtomic(filePath: string, data: any) function
+  - [ ] Use Node.js fs.writeFileSync to write to temporary file with .tmp extension
+  - [ ] Implement verification step to ensure temporary file write succeeded
+  - [ ] Use fs.renameSync for atomic rename operation (POSIX atomic guarantee)
+  - [ ] Implement error handling for write failures and rename failures
+  - [ ] Add temporary file cleanup in error handling with try-catch-finally pattern
+  - [ ] Preserve original file permissions using fs.stat and fs.chmod if needed
+
+- [ ] Task 2: Integrate atomic writes into server configuration endpoints (AC: 1,2,3,5,6,7)
+  - [ ] Update POST /api/config/servers endpoint to use writeConfigAtomic for servers.json
+  - [ ] Update PUT /api/config/servers/:id endpoint to use writeConfigAtomic for servers.json
+  - [ ] Update DELETE /api/config/servers/:id endpoint to use writeConfigAtomic for servers.json
+  - [ ] Ensure proper error responses returned to client if atomic write fails
+  - [ ] Add logging for atomic write operations (success/failure with context)
+
+- [ ] Task 3: Integrate atomic writes into group configuration endpoints (AC: 4,5,6,7)
+  - [ ] Update POST /api/config/groups endpoint to use writeConfigAtomic for dashboard-layout.json
+  - [ ] Update PUT /api/config/groups/:id endpoint to use writeConfigAtomic for dashboard-layout.json
+  - [ ] Update DELETE /api/config/groups/:id endpoint to use writeConfigAtomic for dashboard-layout.json
+  - [ ] Ensure proper error responses returned to client if atomic write fails
+  - [ ] Add logging for atomic write operations (success/failure with context)
+
+- [ ] Task 4: Add comprehensive error handling and recovery mechanisms (AC: 5,6,8)
+  - [ ] Implement proper error messages for different failure scenarios (write failure, rename failure)
+  - [ ] Add detailed error logging with file paths, error codes, and context for debugging
+  - [ ] Ensure temporary files are cleaned up even in unexpected error scenarios
+  - [ ] Add retry logic if appropriate for transient file system errors
+  - [ ] Return appropriate HTTP status codes (500 for internal server error during file operations)
+
+- [ ] Task 5: Add comprehensive testing for atomic write functionality (AC: 1,2,3,4,5,6,7,8)
+  - [ ] Unit tests for writeConfigAtomic function covering success and failure scenarios
+  - [ ] Integration tests for server endpoints with atomic writes
+  - [ ] Integration tests for group endpoints with atomic writes
+  - [ ] Test process interruption simulation (if possible in test environment)
+  - [ ] Test concurrent write scenarios to ensure atomicity
+  - [ ] Test temporary file cleanup in error scenarios
+  - [ ] Test file permission preservation across atomic operations</tasks>
+  </story>
+
+  <acceptanceCriteria>1. Backend uses atomic write pattern for servers.json: Write to temporary file (e.g., `servers.json.tmp`)
+2. Backend verifies write succeeded before proceeding to rename
+3. Backend renames temp file to actual file (atomic operation on POSIX)
+4. Backend uses atomic write pattern for dashboard-layout.json with same pattern
+5. If process crashes during write or verify steps, the original file remains intact
+6. If rename fails, the error is logged and returned to client with proper error handling
+7. File permissions are preserved (same as original file) when using atomic writes
+8. Temporary files are properly cleaned up on error to prevent disk space issues</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/epics.md" title="Product Requirements and Epic Breakdown" section="Story 4.5 Technical Notes" snippet="Implement atomic write helper function. Use Node.js fs.writeFileSync to temp file, then fs.renameSync (atomic on POSIX). Handle errors gracefully, return 500 status if atomic write fails. Ensure temp file is cleaned up on error." />
+      <doc path="docs/architecture.md" title="System Architecture" section="writeConfigAtomic() function" snippet="writeConfigAtomic() - temp file + rename. Atomic file writes (integration tests - verify temp file cleanup). Mitigation: Atomic file writes (temp + rename), last-write-wins." />
+    </docs>
+    <code>
+      <code path="backend/src/utils/fileUtils.ts" kind="utility" symbol="writeConfigAtomic" lines="16-35" reason="Existing atomic write function already implements temp file + rename pattern" />
+      <code path="backend/src/utils/fileUtils.ts" kind="utility" symbol="readConfigFile" lines="44-51" reason="Helper function for reading config files that complements atomic writes" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="POST /api/config/servers" lines="583-683" reason="Server creation endpoint already using writeConfigAtomic for servers.json" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="PUT /api/config/servers/:id" lines="698-791" reason="Server update endpoint already using writeConfigAtomic for servers.json" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="DELETE /api/config/servers/:id" lines="808-922" reason="Server deletion endpoint already using writeConfigAtomic for servers.json" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="POST /api/config/groups" lines="124-243" reason="Group creation endpoint already using writeConfigAtomic for dashboard-layout.json" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="PUT /api/config/groups/:id" lines="258-385" reason="Group update endpoint already using writeConfigAtomic for dashboard-layout.json" />
+      <code path="backend/src/routes/config.ts" kind="controller" symbol="DELETE /api/config/groups/:id" lines="407-568" reason="Group deletion endpoint already using writeConfigAtomic for dashboard-layout.json" />
+      <code path="backend/src/config/file-paths.ts" kind="config" symbol="CONFIG_PATHS" reason="Contains file paths for servers.json and dashboard-layout.json" />
+    </code>
+    <dependencies>
+      <framework name="Node.js" version="20.x" />
+      <framework name="TypeScript" version="5.3.3" />
+      <framework name="Express" version="4.18.2" />
+      <library name="fs/promises" builtin="true" />
+      <library name="path" builtin="true" />
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint name="Atomic write pattern" description="Must use temp file + rename pattern for all config file writes" />
+    <constraint name="Error handling" description="Must clean up temp files on error and return proper HTTP status codes" />
+    <constraint name="File permissions" description="Must preserve original file permissions when using atomic writes" />
+    <constraint name="POSIX atomicity" description="Rely on fs.rename atomicity guarantee on POSIX systems" />
+    <constraint name="No blocking writes" description="Use async/await patterns, never sync operations that block event loop" />
+    <constraint name="JSON formatting" description="Use 2-space indentation for JSON files" />
+  </constraints>
+  <interfaces>
+    <interface name="writeConfigAtomic" kind="function" signature="async writeConfigAtomic(filePath: string, data: any): Promise<void>" path="backend/src/utils/fileUtils.ts" />
+    <interface name="ApiResponse" kind="type" signature="interface ApiResponse&lt;T&gt; { success: boolean; data?: T; error?: string; }" path="backend/src/routes/config.ts" />
+    <interface name="ServerConfig" kind="type" path="backend/src/types/server.ts" />
+    <interface name="GroupConfig" kind="type" signature="interface GroupConfig { id: string; name: string; order: number; serverIds: string[]; }" path="backend/src/routes/config.ts" />
+    <interface name="CONFIG_PATHS" kind="constant" path="backend/src/config/file-paths.ts" />
+  </interfaces>
+  <tests>
+    <standards>Unit tests for utility functions using Jest or similar framework. Integration tests for API endpoints using supertest. File system tests should create temporary test files and verify atomic behavior. Error scenarios must be tested including write failures, permission errors, and disk full conditions.</standards>
+    <locations>backend/src/__tests__/utils/ for utility function tests. backend/src/__tests__/routes/ for API endpoint integration tests. Use temporary directories for file system tests with cleanup.</locations>
+    <ideas>
+      <test for="AC1">Test writeConfigAtomic creates .tmp file then renames to target - verify atomic operation</test>
+      <test for="AC2">Test write verification by checking temp file exists before rename</test>
+      <test for="AC3">Test atomic rename using fs.rename - verify no intermediate state visible</test>
+      <test for="AC4">Test same atomic pattern for dashboard-layout.json writes</test>
+      <test for="AC5">Simulate process crash during write - verify original file intact</test>
+      <test for="AC6">Test rename failure scenarios - proper error logging and 500 status</test>
+      <test for="AC7">Test file permissions preserved across atomic operations</test>
+      <test for="AC8">Test temp file cleanup on write errors and exceptions</test>
+      <test for="Concurrent writes">Test concurrent write scenarios to verify atomicity</test>
+    </ideas>
+  </tests>
+</story-context>

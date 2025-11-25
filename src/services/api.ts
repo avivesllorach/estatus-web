@@ -59,8 +59,12 @@ const API_BASE_URL = '/api';
 
 export class ApiService {
   private eventSource: EventSource | null = null;
+  private reconnectionTimeout: number | null = null;
   private onStatusUpdateCallback: ((servers: ServerData[]) => void) | null = null;
   private onGroupsUpdateCallback: ((groups: GroupConfig[]) => void) | null = null;
+  private onServerRemovedCallback: ((serverId: string, serverName: string) => void) | null = null;
+  private onServerUpdatedCallback: ((server: ServerConfig) => void) | null = null;
+  private onErrorCallback: ((error: Event) => void) | null = null;
   private servers: Map<string, ServerData> = new Map();
 
   async fetchServers(): Promise<ServerData[]> {
@@ -100,9 +104,24 @@ export class ApiService {
     }
   }
 
-  connectToStatusUpdates(onUpdate: (servers: ServerData[]) => void, onGroupsUpdate?: (groups: GroupConfig[]) => void): void {
+  connectToStatusUpdates(
+    onUpdate: (servers: ServerData[]) => void,
+    onGroupsUpdate?: (groups: GroupConfig[]) => void,
+    onServerRemoved?: (serverId: string, serverName: string) => void,
+    onServerUpdated?: (server: ServerConfig) => void,
+    onError?: (error: Event) => void
+  ): void {
+    // Clear any pending reconnection timeout to prevent memory leaks
+    if (this.reconnectionTimeout) {
+      clearTimeout(this.reconnectionTimeout);
+      this.reconnectionTimeout = null;
+    }
+
     this.onStatusUpdateCallback = onUpdate;
     this.onGroupsUpdateCallback = onGroupsUpdate || null;
+    this.onServerRemovedCallback = onServerRemoved || null;
+    this.onServerUpdatedCallback = onServerUpdated || null;
+    this.onErrorCallback = onError || null;
 
     // Close existing connection
     if (this.eventSource) {
@@ -127,14 +146,29 @@ export class ApiService {
 
     this.eventSource.onerror = (error) => {
       console.error('SSE connection error:', error);
-      
-      // Attempt to reconnect after 5 seconds
-      setTimeout(() => {
-        if (this.onStatusUpdateCallback) {
-          console.log('Attempting to reconnect to status stream...');
-          this.connectToStatusUpdates(this.onStatusUpdateCallback);
-        }
-      }, 5000);
+
+      // Call error callback if provided
+      if (this.onErrorCallback) {
+        this.onErrorCallback(error);
+      }
+
+      // Only attempt to reconnect if we still have callbacks (component hasn't unmounted)
+      if (this.onStatusUpdateCallback) {
+        // Store the reconnection timeout so it can be cleared on disconnect
+        this.reconnectionTimeout = setTimeout(() => {
+          // Double-check that we still have callbacks before reconnecting
+          if (this.onStatusUpdateCallback) {
+            console.log('Attempting to reconnect to status stream...');
+            this.connectToStatusUpdates(
+              this.onStatusUpdateCallback,
+              this.onGroupsUpdateCallback || undefined,
+              this.onServerRemovedCallback || undefined,
+              this.onServerUpdatedCallback || undefined,
+              this.onErrorCallback || undefined
+            );
+          }
+        }, 5000);
+      }
     };
   }
 
@@ -243,6 +277,11 @@ export class ApiService {
               this.onStatusUpdateCallback(Array.from(this.servers.values()));
             }
 
+            // Notify specific server updated callback for conflict detection
+            if (this.onServerUpdatedCallback) {
+              this.onServerUpdatedCallback(message.server);
+            }
+
             console.log(`Server updated: ${existingServer.name} (${existingServer.ip})`);
           }
         }
@@ -258,6 +297,11 @@ export class ApiService {
             // Notify callback with updated data
             if (this.onStatusUpdateCallback) {
               this.onStatusUpdateCallback(Array.from(this.servers.values()));
+            }
+
+            // Notify specific server removed callback for conflict detection
+            if (this.onServerRemovedCallback) {
+              this.onServerRemovedCallback(message.serverId, removedServer.name);
             }
 
             console.log(`Server removed: ${removedServer.name} (${message.serverId})`);
@@ -286,12 +330,21 @@ export class ApiService {
   }
 
   disconnect(): void {
+    // Clear any pending reconnection timeout to prevent memory leaks
+    if (this.reconnectionTimeout) {
+      clearTimeout(this.reconnectionTimeout);
+      this.reconnectionTimeout = null;
+    }
+
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
     }
     this.onStatusUpdateCallback = null;
     this.onGroupsUpdateCallback = null;
+    this.onServerRemovedCallback = null;
+    this.onServerUpdatedCallback = null;
+    this.onErrorCallback = null;
     console.log('Disconnected from server status stream');
   }
 

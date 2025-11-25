@@ -5,11 +5,36 @@ import { SnmpService } from './snmpService';
 import { NetAppService } from './netappService';
 import { EventEmitter } from 'events';
 
+export interface MonitoringMetrics {
+  totalServers: number;
+  onlineServers: number;
+  offlineServers: number;
+  lastConfigChange?: Date;
+  configChangeCount: number;
+  averagePingTime: number;
+  monitoringUptime: number;
+  snmpEnabledCount: number;
+  netappEnabledCount: number;
+  lastStateTransition?: Date;
+}
+
+export interface MonitoringGap {
+  serverId: string;
+  startTime: Date;
+  endTime: Date;
+  duration: number; // in milliseconds
+}
+
 export class PingService extends EventEmitter {
   private serverStatusMap = new Map<string, ServerStatus>();
   private pingPromises = new Map<string, Promise<void>>();
   private snmpIntervals = new Map<string, NodeJS.Timeout>();
   private isRunning = false;
+  private startTime: Date = new Date();
+  private configChangeCount = 0;
+  private lastConfigChange?: Date;
+  private monitoringGaps: MonitoringGap[] = [];
+  private pingTimes: number[] = [];
 
   constructor(private servers: ServerConfig[]) {
     super();
@@ -42,6 +67,15 @@ export class PingService extends EventEmitter {
 
       const success = response.alive;
       const responseTime = response.time === 'unknown' ? undefined : parseFloat(String(response.time));
+
+      // Track ping times for metrics
+      if (responseTime && responseTime > 0) {
+        this.pingTimes.push(responseTime);
+        // Keep only last 100 ping times to avoid memory issues
+        if (this.pingTimes.length > 100) {
+          this.pingTimes = this.pingTimes.slice(-100);
+        }
+      }
 
       return {
         success,
@@ -637,7 +671,12 @@ export class PingService extends EventEmitter {
    * This is the main integration point for hot-reload functionality
    */
   public async onConfigChange(newServers: ServerConfig[]): Promise<void> {
+    const configChangeStartTime = new Date();
     console.log(`🔄 Processing configuration change for ${newServers.length} servers...`);
+
+    // Update configuration metrics
+    this.configChangeCount++;
+    this.lastConfigChange = configChangeStartTime;
 
     try {
       const currentServerMap = new Map(this.servers.map(s => [s.id, s]));
@@ -651,6 +690,9 @@ export class PingService extends EventEmitter {
       });
 
       console.log(`📊 Configuration delta: +${added.length} added, -${removed.length} removed, ~${updated.length} updated`);
+
+      // Track monitoring gaps for affected servers
+      this.trackMonitoringGaps(added, removed, updated, configChangeStartTime);
 
       // Process removals first (stop monitoring)
       if (removed.length > 0) {
@@ -669,9 +711,187 @@ export class PingService extends EventEmitter {
 
       console.log(`✅ Configuration change processed successfully`);
 
+      const configChangeEndTime = new Date();
+      const configChangeDuration = configChangeEndTime.getTime() - configChangeStartTime.getTime();
+      console.log(`📊 Configuration change processed in ${configChangeDuration}ms`);
+
     } catch (error) {
       console.error(`❌ Error processing configuration change:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Track monitoring gaps for configuration change observability
+   */
+  private trackMonitoringGaps(
+    added: ServerConfig[],
+    removed: ServerConfig[],
+    updated: ServerConfig[],
+    startTime: Date
+  ): void {
+    // For removed servers, record the monitoring gap from their last check
+    removed.forEach(server => {
+      const lastStatus = this.serverStatusMap.get(server.id);
+      if (lastStatus) {
+        const gap: MonitoringGap = {
+          serverId: server.id,
+          startTime: lastStatus.lastChecked,
+          endTime: startTime,
+          duration: startTime.getTime() - lastStatus.lastChecked.getTime()
+        };
+        this.monitoringGaps.push(gap);
+        console.log(`📊 Monitoring gap recorded for ${server.name}: ${gap.duration}ms`);
+      }
+    });
+
+    // For updated servers, record brief interruption
+    updated.forEach(server => {
+      const lastStatus = this.serverStatusMap.get(server.id);
+      if (lastStatus) {
+        const gap: MonitoringGap = {
+          serverId: server.id,
+          startTime: lastStatus.lastChecked,
+          endTime: startTime,
+          duration: startTime.getTime() - lastStatus.lastChecked.getTime()
+        };
+        this.monitoringGaps.push(gap);
+        console.log(`📊 Configuration change gap for ${server.name}: ${gap.duration}ms`);
+      }
+    });
+
+    // Keep only last 50 monitoring gaps to avoid memory issues
+    if (this.monitoringGaps.length > 50) {
+      this.monitoringGaps = this.monitoringGaps.slice(-50);
+    }
+  }
+
+  /**
+   * Get comprehensive monitoring metrics for observability
+   */
+  public getMonitoringMetrics(): MonitoringMetrics {
+    const now = new Date();
+    const statuses = Array.from(this.serverStatusMap.values());
+    const onlineCount = statuses.filter(s => s.isOnline).length;
+    const offlineCount = statuses.length - onlineCount;
+
+    // Calculate average ping time
+    const averagePingTime = this.pingTimes.length > 0
+      ? this.pingTimes.reduce((sum, time) => sum + time, 0) / this.pingTimes.length
+      : 0;
+
+    // Calculate monitoring uptime
+    const monitoringUptime = now.getTime() - this.startTime.getTime();
+
+    // Count enabled services
+    const snmpEnabledCount = this.servers.filter(s => s.snmp?.enabled).length;
+    const netappEnabledCount = this.servers.filter(s => s.netapp?.enabled).length;
+
+    // Find last state transition
+    const lastStateTransition = statuses
+      .map(s => s.lastStatusChange)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    return {
+      totalServers: statuses.length,
+      onlineServers: onlineCount,
+      offlineServers: offlineCount,
+      lastConfigChange: this.lastConfigChange,
+      configChangeCount: this.configChangeCount,
+      averagePingTime: Math.round(averagePingTime * 100) / 100, // Round to 2 decimal places
+      monitoringUptime,
+      snmpEnabledCount,
+      netappEnabledCount,
+      lastStateTransition
+    };
+  }
+
+  /**
+   * Get recent monitoring gaps for performance analysis
+   */
+  public getMonitoringGaps(limit: number = 10): MonitoringGap[] {
+    return this.monitoringGaps
+      .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
+      .slice(0, limit);
+  }
+
+  /**
+   * Get monitoring performance summary
+   */
+  public getMonitoringPerformance(): {
+    averageGapDuration: number;
+    maxGapDuration: number;
+    gapCount: number;
+    gapsUnder5Seconds: number;
+    gapsOver5Seconds: number;
+  } {
+    if (this.monitoringGaps.length === 0) {
+      return {
+        averageGapDuration: 0,
+        maxGapDuration: 0,
+        gapCount: 0,
+        gapsUnder5Seconds: 0,
+        gapsOver5Seconds: 0
+      };
+    }
+
+    const durations = this.monitoringGaps.map(gap => gap.duration);
+    const averageGapDuration = durations.reduce((sum, duration) => sum + duration, 0) / durations.length;
+    const maxGapDuration = Math.max(...durations);
+    const gapsUnder5Seconds = durations.filter(duration => duration < 5000).length;
+    const gapsOver5Seconds = durations.filter(duration => duration >= 5000).length;
+
+    return {
+      averageGapDuration: Math.round(averageGapDuration * 100) / 100,
+      maxGapDuration,
+      gapCount: this.monitoringGaps.length,
+      gapsUnder5Seconds,
+      gapsOver5Seconds
+    };
+  }
+
+  /**
+   * Get health check endpoint data
+   */
+  public getHealthCheck(): {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    uptime: number;
+    serverCount: number;
+    onlinePercentage: number;
+    lastConfigChange: Date | null;
+    recentGapCount: number;
+    averagePingTime: number;
+  } {
+    const metrics = this.getMonitoringMetrics();
+    const performance = this.getMonitoringPerformance();
+    const now = new Date();
+
+    // Get gaps from last 5 minutes
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const recentGaps = this.monitoringGaps.filter(gap => gap.endTime > fiveMinutesAgo);
+
+    const onlinePercentage = metrics.totalServers > 0
+      ? (metrics.onlineServers / metrics.totalServers) * 100
+      : 0;
+
+    // Determine health status
+    let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+
+    if (recentGaps.length > 5) {
+      status = 'degraded';
+    }
+    if (performance.gapsOver5Seconds > 2 || onlinePercentage < 50) {
+      status = 'unhealthy';
+    }
+
+    return {
+      status,
+      uptime: metrics.monitoringUptime,
+      serverCount: metrics.totalServers,
+      onlinePercentage: Math.round(onlinePercentage * 100) / 100,
+      lastConfigChange: metrics.lastConfigChange || null,
+      recentGapCount: recentGaps.length,
+      averagePingTime: metrics.averagePingTime
+    };
   }
 }

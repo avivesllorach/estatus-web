@@ -10,6 +10,7 @@ import { ServerConfig, SnmpConfig, NetAppConfig } from '@/types/server';
 import { GroupConfig } from '@/types/group';
 import { configApi, ServerData } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import { useConflictDetection } from '@/hooks/use-conflict-detection';
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,11 @@ interface MainPanelProps {
   onNavigationRequest?: (targetId: string, type: 'server' | 'group' | 'add-server') => void;
   onDirtyStateChange?: (isDirty: boolean) => void;
   onGroupsRefresh?: () => void;
+  // Callback to get conflict detection handlers
+  onConflictHandlersReady?: (handlers: {
+    handleServerRemoved: (serverId: string, serverName: string) => void;
+    handleServerUpdated: (server: ServerConfig) => void;
+  }) => void;
 }
 
 export function MainPanel({
@@ -67,9 +73,31 @@ export function MainPanel({
   servers = [],
   groups = [],
   onNavigationRequest,
-  onGroupsRefresh
+  onGroupsRefresh,
+  onConflictHandlersReady
 }: MainPanelProps) {
   const { toast } = useToast();
+
+  // Compute dirty state (has unsaved changes) - MUST be before using it in other hooks
+  const isDirty = useMemo(() => {
+    if (!initialData || !formData) return false;
+    return JSON.stringify(initialData) !== JSON.stringify(formData);
+  }, [initialData, formData]);
+
+  // Conflict detection for concurrent edits
+  const {
+    conflictState,
+    updateLastKnownServer,
+    handleServerRemoved,
+    handleServerUpdated,
+    handleKeepEditing,
+    handleReloadLatest,
+    handleClose: handleConflictClose
+  } = useConflictDetection({
+    selectedServerId,
+    selectedServerName: selectedServerName || '',
+    isDirty
+  });
 
   // Determine mode based on selectedServerId
   const isAddMode = selectedServerId === '__ADD_MODE__';
@@ -117,11 +145,23 @@ export function MainPanel({
   // Track previous selectedServerId to detect navigation attempts
   const previousServerId = useRef(selectedServerId);
 
-  // Compute dirty state (has unsaved changes) - MUST be before useEffect that uses it
-  const isDirty = useMemo(() => {
-    if (!initialData || !formData) return false;
-    return JSON.stringify(initialData) !== JSON.stringify(formData);
-  }, [initialData, formData]);
+  
+  // Update last known server when selectedServer changes
+  useEffect(() => {
+    if (selectedServer) {
+      updateLastKnownServer(selectedServer);
+    }
+  }, [selectedServer, updateLastKnownServer]);
+
+  // Provide conflict detection handlers to parent ConfigPage
+  useEffect(() => {
+    if (onConflictHandlersReady) {
+      onConflictHandlersReady({
+        handleServerRemoved,
+        handleServerUpdated
+      });
+    }
+  }, [handleServerRemoved, handleServerUpdated, onConflictHandlersReady]);
 
   // Detect navigation attempt and show unsaved warning if needed
   useEffect(() => {
@@ -576,6 +616,46 @@ export function MainPanel({
               >
                 {isLoading ? 'Saving...' : 'Save & Continue'}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Conflict Detection Dialog */}
+        <Dialog open={conflictState.showConflictDialog} onOpenChange={handleConflictClose}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {conflictState.conflictType === 'deleted' ? 'Server Deleted' : 'Server Updated'}
+              </DialogTitle>
+              <DialogDescription>
+                {conflictState.conflictType === 'deleted'
+                  ? `This server (${conflictState.conflictServerName}) was deleted by another user.`
+                  : `Server (${conflictState.conflictServerName}) was updated by another user while you were editing.`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              {conflictState.conflictType === 'updated' ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={handleKeepEditing}
+                  >
+                    Keep Editing
+                  </Button>
+                  <Button
+                    onClick={handleReloadLatest}
+                  >
+                    Reload Latest
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={handleKeepEditing}
+                >
+                  Close
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

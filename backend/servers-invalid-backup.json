@@ -1,0 +1,37 @@
+[
+  {
+    "id": "server-001",
+    "name": "Invalid Server Test",
+    "ip": "invalid-ip-address",
+    "dns": "test.invalid.local",
+    "consecutiveSuccesses": 3,
+    "consecutiveFailures": 3,
+    "snmpConfig": {
+      "enabled": true,
+      "community": "public",
+      "storageIndexes": "invalid-indexes",
+      "diskNames": ["C:", "D:"]
+    },
+    "netappConfig": {
+      "enabled": true,
+      "apiType": "invalid-api",
+      "username": "",
+      "password": "",
+      "luns": "invalid-luns-array"
+    }
+  },
+  {
+    "id": "server-002",
+    "name": "Missing Required Field",
+    "ip": "192.168.1.1"
+    // Missing dns, consecutiveSuccesses, consecutiveFailures
+  },
+  {
+    "id": "server-003",
+    "name": "Null Values Test",
+    "ip": null,
+    "dns": null,
+    "consecutiveSuccesses": null,
+    "consecutiveFailures": null
+  }
+// This JSON has syntax errors: missing comma after server-002, invalid data types, etc.

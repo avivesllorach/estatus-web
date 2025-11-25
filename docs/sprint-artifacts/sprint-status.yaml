@@ -73,8 +73,8 @@ development_status:
   4-1-implement-backend-configuration-hot-reload-mechanism: done
   4-2-extend-sse-events-for-configuration-changes: done
   4-3-implement-dashboard-real-time-updates-for-server-changes: done
-  4-4-implement-config-page-real-time-updates: backlog
-  4-5-implement-atomic-file-writes-for-data-integrity: backlog
-  4-6-preserve-monitoring-state-during-configuration-changes: backlog
+  4-4-implement-config-page-real-time-updates: done
+  4-5-implement-atomic-file-writes-for-data-integrity: done
+  4-6-preserve-monitoring-state-during-configuration-changes: done
   4-7-implement-backend-logging-for-configuration-changes: backlog
   epic-4-retrospective: optional

@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { promises as fs, constants } from 'fs';
 import path from 'path';
 
 /**
@@ -15,10 +15,31 @@ import path from 'path';
  */
 export async function writeConfigAtomic(filePath: string, data: any): Promise<void> {
   const tempPath = `${filePath}.tmp`;
+  let originalPermissions: number | undefined;
 
   try {
+    // Preserve original file permissions if file exists
+    try {
+      const stats = await fs.stat(filePath);
+      originalPermissions = stats.mode;
+    } catch {
+      // File doesn't exist, will use default permissions
+      originalPermissions = undefined;
+    }
+
     // Write to temp file with formatting (2-space indent)
     await fs.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Verify write succeeded by checking temp file exists and has content
+    const tempStats = await fs.stat(tempPath);
+    if (tempStats.size === 0) {
+      throw new Error('Temporary file is empty after write');
+    }
+
+    // Preserve permissions if they were captured
+    if (originalPermissions !== undefined) {
+      await fs.chmod(tempPath, originalPermissions);
+    }
 
     // Atomic rename (POSIX guarantee)
     await fs.rename(tempPath, filePath);

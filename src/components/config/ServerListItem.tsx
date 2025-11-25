@@ -24,7 +24,8 @@ export const ServerListItem = forwardRef<HTMLDivElement, ServerListItemProps>(
       <div
         ref={ref}
         className={cn(
-          "p-3 cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset",
+          "p-3 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset",
+          "server-list-item focus-ring-stable", // Smooth update classes
           isActive
             ? "bg-blue-50" // Active state - blue background
             : "hover:bg-gray-100" // Hover state for non-active items
@@ -37,13 +38,13 @@ export const ServerListItem = forwardRef<HTMLDivElement, ServerListItemProps>(
         tabIndex={0}
       >
         <div className={cn(
-          "text-sm font-semibold",
+          "text-sm font-semibold preserve-selection",
           isActive ? "text-blue-600" : "text-gray-900"
         )}>
           {server.name}
         </div>
         <div className={cn(
-          "text-xs font-mono",
+          "text-xs font-mono preserve-selection",
           isActive ? "text-blue-500" : "text-gray-600"
         )}>
           {server.ip}

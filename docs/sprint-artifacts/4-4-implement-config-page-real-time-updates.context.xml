@@ -1,0 +1,163 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4</storyId>
+    <title>Implement Config Page Real-Time Updates</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25T12:00:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-4-implement-config-page-real-time-updates.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user on the config page</asA>
+    <iWant>the server/group lists to update automatically when changes are made from another session</iWant>
+    <soThat>multiple config pages stay in sync</soThat>
+    <tasks>Task 1: Extend ConfigPage SSE integration (AC: 1,2,3,4) - Connect ConfigPage to existing `/api/events` SSE stream, Add event handlers for serverAdded, serverRemoved, serverUpdated, groupsChanged, Integrate with existing ConfigPage state management (servers, groups, selectedServerId); Task 2: Implement sidebar real-time updates (AC: 1,2,3,4) - Update servers state when serverAdded/serverRemoved/serverUpdated events received, Update groups state when groupsChanged event received, Maintain selectedServerId/selectedGroupId state during updates, Handle edge cases: rapid events, duplicate events, invalid event data; Task 3: Implement conflict detection for active edits (AC: 6,7) - Detect when selectedServerId matches deleted server in serverRemoved event, Show notification dialog for deleted server: "This server was deleted by another user", Detect when selectedServerId matches updated server with unsaved changes, Show conflict warning for concurrent edits: "Server was updated by another user", Provide options: [Keep Editing] [Reload Latest] for conflict resolution; Task 4: Ensure smooth user experience during updates (AC: 5) - Prevent visual disruption during sidebar updates, Maintain form focus and scroll position during list updates, Handle network interruptions and automatic reconnection, Test multi-client scenarios with rapid consecutive changes; Task 5: Add comprehensive error handling and testing (AC: 5,6,7) - Handle SSE connection errors and automatic reconnection, Validate event data structure before processing, Test conflict scenarios: concurrent edits, network issues, invalid events, Ensure no memory leaks from SSE listeners</tasks>
+  </story>
+
+  <acceptanceCriteria>1. Config page receives and processes serverAdded SSE events by updating sidebar server list; 2. Config page receives and processes serverRemoved SSE events by removing servers from sidebar; 3. Config page receives and processes serverUpdated SSE events by updating server data in sidebar; 4. Config page receives and processes groupsChanged SSE events by updating group list; 5. Multi-client synchronization works: changes on Computer B appear on Computer A without refresh; 6. Conflict detection shows notification when editing deleted server: "This server was deleted by another user"; 7. Conflict warning appears when editing server with unsaved changes that was updated elsewhere</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>Real-Time Configuration Updates</section>
+        <snippet>FR67: Configuration changes made on Computer A appear on dashboard on Computer B without refresh. FR46-FR50: System broadcasts configuration changes via SSE to all connected dashboard clients for real-time updates.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Real-Time Architecture</section>
+        <snippet>SSE-based multi-client synchronization reuses existing real-time infrastructure. Event-driven hot-reload using ConfigManager service with SSE broadcasting of configuration changes to all connected clients.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>Real-time Feedback</section>
+        <snippet>Success/error feedback immediate and non-blocking (toast notifications). Live Updates Without Restarts - Configuration changes apply immediately to both frontend and backend without service interruptions.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 4.4</section>
+        <snippet>Config page also listens to `/api/events` SSE stream. Handle serverAdded/Removed/Updated events by updating sidebar lists. Handle groupsChanged events by updating group list. Conflict detection for concurrent edits scenarios.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>src/pages/ConfigPage.tsx</path>
+        <kind>React component</kind>
+        <symbol>ConfigPage</symbol>
+        <lines>1-50</lines>
+        <reason>Main config page with existing state management (servers, groups, selectedServerId) that needs SSE integration</reason>
+      </file>
+      <file>
+        <path>src/services/api.ts</path>
+        <kind>Service</kind>
+        <symbol>ApiService</symbol>
+        <lines>47-65</lines>
+        <reason>Contains EventMessage interface with serverAdded/serverUpdated/serverRemoved/groupsChanged event types and existing SSE infrastructure</reason>
+      </file>
+      <file>
+        <path>backend/src/routes/events.ts</path>
+        <kind>Express route</kind>
+        <symbol>createEventsRoute</symbol>
+        <lines>68-110</lines>
+        <reason>Backend SSE endpoint already broadcasts serverAdded/serverUpdated/serverRemoved/groupsChanged events that ConfigPage needs to consume</reason>
+      </file>
+      <file>
+        <path>src/components/config/Sidebar.tsx</path>
+        <kind>React component</kind>
+        <symbol>Sidebar</symbol>
+        <lines>1-30</lines>
+        <reason>Displays server and group lists that need real-time updates from SSE events</reason>
+      </file>
+      <file>
+        <path>src/components/config/MainPanel.tsx</path>
+        <kind>React component</kind>
+        <symbol>MainPanel</symbol>
+        <lines>1-30</lines>
+        <reason>Contains server/group edit forms that need conflict detection when editing items that change elsewhere</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem name="frontend">
+        <package name="react" version="^18.2.0" />
+        <package name="react-router-dom" version="^7.9.6" />
+        <package name="@radix-ui/react-dialog" version="^1.1.15" />
+        <package name="@radix-ui/react-toast" version="^1.2.15" />
+      </ecosystem>
+      <ecosystem name="backend">
+        <package name="express" version="4.x" />
+        <package name="EventSource" version="browser-native" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <name>Reuse existing SSE infrastructure</name>
+      <description>Must use existing `/api/events` endpoint and EventSource patterns from Story 4.2 and Dashboard implementation</description>
+    </constraint>
+    <constraint>
+      <name>Maintain existing state management</name>
+      <description>Preserve ConfigPage's current servers, groups, and selectedServerId state structure and patterns</description>
+    </constraint>
+    <constraint>
+      <name>No disruption to monitoring</name>
+      <description>SSE integration must not interfere with existing statusChange and diskUpdate events for monitoring</description>
+    </constraint>
+    <constraint>
+      <name>Single SSE connection per page</key>
+      <description>Follow established pattern: single EventSource connection with multiple event type handlers</description>
+    </constraint>
+    <constraint>
+      <name>Form behavior preservation</name>
+      <description>Real-time updates must not disrupt existing form validation, unsaved changes tracking, or focus management</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>EventMessage</name>
+      <kind>TypeScript interface</kind>
+      <signature>type: 'connected' | 'initial' | 'statusChange' | 'diskUpdate' | 'heartbeat' | 'serverAdded' | 'serverUpdated' | 'serverRemoved' | 'groupsChanged'</signature>
+      <path>src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>ServerData</name>
+      <kind>TypeScript interface</kind>
+      <signature>id: string; name: string; ip: string; isOnline: boolean; consecutiveSuccesses: number; consecutiveFailures: number; lastChecked: string; lastStatusChange: string; diskInfo?: DiskInfo[] | null</signature>
+      <path>src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>GroupConfig</name>
+      <kind>TypeScript interface</kind>
+      <signature>id: string; name: string; order: number; serverIds: string[]</signature>
+      <path>src/types/group.ts</path>
+    </interface>
+    <interface>
+      <name>GET /api/events</name>
+      <kind>REST endpoint</kind>
+      <signature>Server-Sent Events stream with configuration change events</signature>
+      <path>backend/src/routes/events.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Project uses React Testing Library for component testing with TypeScript. Tests focus on user behavior and state changes rather than implementation details. Mock EventSource for SSE testing with controlled event emission. Follow existing test patterns from Dashboard and ServerContainer test files.</standards>
+    <locations>src/components/__tests__/ - component tests; src/services/__tests__/ - service tests; Test files follow *.test.tsx naming convention</locations>
+    <ideas>
+      <idea ac="1">Test ConfigPage SSE connection setup and serverAdded event handling with mock EventSource</idea>
+      <idea ac="2">Test serverRemoved event updates Sidebar server list correctly</idea>
+      <idea ac="3">Test serverUpdated event updates server data in both Sidebar and MainPanel</idea>
+      <idea ac="4">Test groupsChanged event updates group list and maintains server assignments</idea>
+      <idea ac="5">Test multi-client scenarios with simulated concurrent edits from different sessions</idea>
+      <idea ac="6">Test conflict detection dialog when editing server that gets deleted elsewhere</idea>
+      <idea ac="7">Test concurrent edit warning when editing server with unsaved changes that updates elsewhere</idea>
+      <idea ac="all">Test error handling: SSE disconnection, invalid event data, rapid successive events</idea>
+    </ideas>
+  </tests>
+</story-context>
