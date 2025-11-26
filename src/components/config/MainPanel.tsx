@@ -30,6 +30,7 @@ function createEmptyServerConfig(): Partial<ServerConfig> {
     dns: '',
     snmp: {
       enabled: false,
+      community: 'public',
       storageIndexes: [],
       disks: []
     },
@@ -56,6 +57,7 @@ interface MainPanelProps {
   onNavigationRequest?: (targetId: string, type: 'server' | 'group' | 'add-server') => void;
   onDirtyStateChange?: (isDirty: boolean) => void;
   onGroupsRefresh?: () => void;
+  onServersRefresh?: () => void;
   // Callback to get conflict detection handlers
   onConflictHandlersReady?: (handlers: {
     handleServerRemoved: (serverId: string, serverName: string) => void;
@@ -74,30 +76,10 @@ export function MainPanel({
   groups = [],
   onNavigationRequest,
   onGroupsRefresh,
+  onServersRefresh,
   onConflictHandlersReady
 }: MainPanelProps) {
   const { toast } = useToast();
-
-  // Compute dirty state (has unsaved changes) - MUST be before using it in other hooks
-  const isDirty = useMemo(() => {
-    if (!initialData || !formData) return false;
-    return JSON.stringify(initialData) !== JSON.stringify(formData);
-  }, [initialData, formData]);
-
-  // Conflict detection for concurrent edits
-  const {
-    conflictState,
-    updateLastKnownServer,
-    handleServerRemoved,
-    handleServerUpdated,
-    handleKeepEditing,
-    handleReloadLatest,
-    handleClose: handleConflictClose
-  } = useConflictDetection({
-    selectedServerId,
-    selectedServerName: selectedServerName || '',
-    isDirty
-  });
 
   // Determine mode based on selectedServerId
   const isAddMode = selectedServerId === '__ADD_MODE__';
@@ -123,6 +105,27 @@ export function MainPanel({
     netapp: selectedServer?.netapp
   });
 
+  // Compute dirty state (has unsaved changes) - MUST be after using it in other hooks
+  const isDirty = useMemo(() => {
+    if (!initialData || !formData) return false;
+    return JSON.stringify(initialData) !== JSON.stringify(formData);
+  }, [initialData, formData]);
+
+  // Conflict detection for concurrent edits
+  const {
+    conflictState,
+    updateLastKnownServer,
+    handleServerRemoved,
+    handleServerUpdated,
+    handleKeepEditing,
+    handleReloadLatest,
+    handleClose: handleConflictClose
+  } = useConflictDetection({
+    selectedServerId,
+    selectedServerName: selectedServerName || '',
+    isDirty
+  });
+
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
 
@@ -136,8 +139,8 @@ export function MainPanel({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
-  // Ref for auto-focus on Server ID field in add mode
-  const serverIdInputRef = useRef<HTMLInputElement>(null);
+  // Ref for auto-focus on Server Name field in add mode
+  const serverNameInputRef = useRef<HTMLInputElement>(null);
 
   // Track if we should skip showing unsaved dialog (after user makes a choice)
   const skipUnsavedCheck = useRef(false);
@@ -207,12 +210,12 @@ export function MainPanel({
       setFormData(serverData);
       setInitialData(serverData);
     }
-  }, [isAddMode, selectedServer?.id, selectedServerId, isDirty, formData]);
+  }, [isAddMode, selectedServer?.id, selectedServerId]);
 
-  // Auto-focus Server ID field when entering add mode
+  // Auto-focus Server Name field when entering add mode
   useEffect(() => {
-    if (isAddMode && serverIdInputRef.current) {
-      serverIdInputRef.current.focus();
+    if (isAddMode && serverNameInputRef.current) {
+      serverNameInputRef.current.focus();
     }
   }, [isAddMode]);
 
@@ -311,8 +314,26 @@ export function MainPanel({
     setIsLoading(true);
 
     try {
+      // Transform frontend data to backend format
+      const backendData = {
+        ...formData,
+        dnsAddress: formData.dns, // Map frontend 'dns' to backend 'dnsAddress'
+        dns: undefined, // Remove frontend field to avoid confusion
+
+        // Transform SNMP configuration if present
+        snmpConfig: formData.snmp ? {
+          enabled: formData.snmp.enabled,
+          community: formData.snmp.community || 'public', // Ensure community is always present
+          storageIndexes: formData.snmp.storageIndexes || [],
+          diskNames: formData.snmp.disks?.map(disk => disk.name || `Disk ${disk.index}`) || []
+        } : undefined,
+
+        // Remove frontend SNMP field to avoid confusion
+        snmp: undefined
+      };
+
       // Call API to create server
-      const newServer = await configApi.createServer(formData as any);
+      const newServer = await configApi.createServer(backendData as any);
 
       // Show success toast
       toast({
@@ -321,20 +342,23 @@ export function MainPanel({
         duration: 3000, // Auto-dismiss after 3 seconds
       });
 
+      // Refresh servers list to update the sidebar
+      if (onServersRefresh) {
+        onServersRefresh();
+      }
+
       // Clear form for another add (AC #12 - implementation choice A)
       const emptyData = createEmptyServerConfig();
       setFormData(emptyData);
       setInitialData(emptyData);
       setValidationErrors({});
 
-      // Re-focus on Server ID field for quick consecutive adds
+      // Re-focus on Server Name field for quick consecutive adds
       setTimeout(() => {
-        if (serverIdInputRef.current) {
-          serverIdInputRef.current.focus();
+        if (serverNameInputRef.current) {
+          serverNameInputRef.current.focus();
         }
       }, 100);
-
-      // TODO: Update sidebar list with new server (requires parent state update)
     } catch (error) {
       // Show error toast
       toast({
@@ -426,8 +450,15 @@ export function MainPanel({
         duration: 3000, // Auto-dismiss after 3 seconds (AC #12)
       });
 
-      // TODO: Clear selection and update sidebar (requires parent state update)
-      // For now, form will stay until parent clears selection
+      // Refresh servers list to update the sidebar
+      if (onServersRefresh) {
+        onServersRefresh();
+      }
+
+      // Clear the current selection since the server was deleted
+      if (onNavigationRequest) {
+        onNavigationRequest('', 'server');
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -477,11 +508,29 @@ export function MainPanel({
       // Determine which server ID to use for saving (the PREVIOUS one before navigation)
       const serverIdToSave = pendingNavigation ? pendingNavigation.split(':')[0] : selectedServerId;
 
+      // Transform frontend data to backend format
+      const backendData = {
+        ...formData,
+        dnsAddress: formData.dns, // Map frontend 'dns' to backend 'dnsAddress'
+        dns: undefined, // Remove frontend field to avoid confusion
+
+        // Transform SNMP configuration if present
+        snmpConfig: formData.snmp ? {
+          enabled: formData.snmp.enabled,
+          community: formData.snmp.community || 'public', // Ensure community is always present
+          storageIndexes: formData.snmp.storageIndexes || [],
+          diskNames: formData.snmp.disks?.map(disk => disk.name || `Disk ${disk.index}`) || []
+        } : undefined,
+
+        // Remove frontend SNMP field to avoid confusion
+        snmp: undefined
+      };
+
       // Save current server
       if (serverIdToSave === '__ADD_MODE__') {
-        await configApi.createServer(formData as any);
+        await configApi.createServer(backendData as any);
       } else if (serverIdToSave) {
-        await configApi.updateServer(serverIdToSave, formData as any);
+        await configApi.updateServer(serverIdToSave, backendData as any);
       }
 
       // Success
@@ -527,7 +576,7 @@ export function MainPanel({
     const saveHandler = isAddMode ? handleSaveNewServer : handleSaveExisting;
 
     return (
-      <div className="flex-1 bg-gray-50 flex flex-col">
+      <div className="flex-1 bg-gray-50 flex flex-col min-h-full">
         <PanelHeader
           title={panelTitle}
           onDelete={isEditMode ? handleDeleteClick : undefined}
@@ -537,7 +586,7 @@ export function MainPanel({
           isLoading={isLoading}
           isDirty={isDirty}
         />
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 p-6">
           <BasicServerInfoSection
             serverId={formData.id || ''}
             serverName={formData.name || ''}
@@ -546,7 +595,7 @@ export function MainPanel({
             onFieldChange={handleFieldChange}
             onValidationChange={handleValidationChange}
             isEditMode={isEditMode}
-            serverIdInputRef={serverIdInputRef}
+            serverNameInputRef={serverNameInputRef}
           />
 
           {/* SNMP Configuration Section */}
@@ -678,14 +727,28 @@ export function MainPanel({
           }
         }}
         onSave={() => {
-          // Group saved successfully - trigger sidebar refresh
+          // Group saved successfully - trigger both groups and servers refresh
+          // since server assignments might have changed
           if (onGroupsRefresh) {
             onGroupsRefresh();
           }
+          if (onServersRefresh) {
+            onServersRefresh();
+          }
         }}
         onDelete={selectedGroupId !== '__ADD_MODE__' ? () => {
-          // TODO: Implement group deletion with confirmation
-          console.log('Delete group:', selectedGroupId);
+          // Group deletion callback - refresh both groups and servers lists
+          if (onGroupsRefresh) {
+            onGroupsRefresh();
+          }
+          if (onServersRefresh) {
+            onServersRefresh();
+          }
+
+          // Clear the current group selection since the group was deleted
+          if (onNavigationRequest) {
+            onNavigationRequest('', 'group');
+          }
         } : undefined}
       />
     );

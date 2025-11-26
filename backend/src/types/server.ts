@@ -5,8 +5,10 @@ export interface DiskConfig {
 
 export interface SnmpConfig {
   enabled: boolean;
+  community?: string; // SNMP community string (optional for backward compatibility)
   storageIndexes: number[]; // Up to 3 indexes for hrStorageIndex (legacy support)
   disks?: DiskConfig[]; // New format with disk names
+  diskNames?: string[]; // Legacy format - array of disk names
 }
 
 export interface LunConfig {

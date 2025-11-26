@@ -11,7 +11,7 @@ import { useConflictDetection } from '@/hooks/use-conflict-detection';
 import '@/styles/smooth-updates.css';
 
 export function ConfigPage() {
-  const [servers, setServers] = useState<ServerData[]>([]);
+  const [servers, setServers] = useState<ServerConfig[]>([]);
   const [groups, setGroups] = useState<GroupConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +61,17 @@ export function ConfigPage() {
     }
   };
 
+  const fetchServers = async () => {
+    try {
+      const serversData = await fetch('/api/config/servers')
+        .then(res => res.json())
+        .then(data => data.success ? data.data : []);
+      setServers(serversData);
+    } catch (error) {
+      console.error('Failed to fetch servers:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -69,7 +80,9 @@ export function ConfigPage() {
 
         // Fetch servers and groups in parallel
         const [serversData, groupsData] = await Promise.all([
-          apiService.fetchServers(),
+          fetch('/api/config/servers')
+            .then(res => res.json())
+            .then(data => data.success ? data.data : []),
           fetch('/api/config/groups')
             .then(res => res.json())
             .then(data => data.success ? data.data : [])
@@ -87,15 +100,20 @@ export function ConfigPage() {
 
     fetchData();
 
+    // Store monitoring data separately for SSE updates
+    let monitoringServers: ServerData[] = [];
+
     // Connect to SSE for real-time updates
     apiService.connectToStatusUpdates(
       (updatedServers) => {
+        monitoringServers = updatedServers;
+
         // Save current focus and scroll positions before update
         saveFocus();
         saveAllScrollPositions();
 
-        // Update servers
-        setServers(updatedServers);
+        // Note: We don't update servers state here since we want to keep config data
+        // The SSE updates are mainly for conflict detection and real-time notifications
 
         // Restore focus and scroll positions after update
         setTimeout(() => {
@@ -108,7 +126,7 @@ export function ConfigPage() {
         saveFocus();
         saveAllScrollPositions();
 
-        // Update groups
+        // Update groups (groups are the same in both config and monitoring)
         setGroups(updatedGroups);
 
         // Restore focus and scroll positions after update
@@ -162,10 +180,25 @@ export function ConfigPage() {
         const data = await response.json();
 
         if (data.success && data.data) {
-          // Convert backend dnsAddress to frontend dns field
+          // Convert backend format to frontend format
           const config: ServerConfig = {
             ...data.data,
-            dns: data.data.dnsAddress
+            dns: data.data.dnsAddress,
+            // Convert backend snmpConfig to frontend snmp format
+            snmp: data.data.snmpConfig ? {
+              enabled: data.data.snmpConfig.enabled,
+              community: data.data.snmpConfig.community || 'public', // Default to 'public' for legacy data
+              storageIndexes: data.data.snmpConfig.storageIndexes || [],
+              disks: data.data.snmpConfig.diskNames?.map((name: string, index: number) => ({
+                index: data.data.snmpConfig.storageIndexes[index] || index + 1,
+                name
+              })) || []
+            } : {
+              enabled: false,
+              community: 'public',
+              storageIndexes: [],
+              disks: []
+            }
           };
           setSelectedServerConfig(config);
         }
@@ -246,10 +279,11 @@ export function ConfigPage() {
         selectedServerName={selectedServerName}
         selectedServer={selectedServerConfig}
         selectedGroup={groups.find(g => g.id === selectedGroupId) || null}
-        servers={servers}
+        servers={[]} // Pass empty array since MainPanel uses selectedServer for editing
         groups={groups}
         onNavigationRequest={handleNavigationRequest}
         onGroupsRefresh={fetchGroups}
+        onServersRefresh={fetchServers}
         onConflictHandlersReady={setConflictHandlers}
       >
         <p className="text-gray-600">Select a server or group from the sidebar to configure.</p>
