@@ -13,7 +13,27 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { GroupConfig } from '@/types/group';
 import { ServerData, configApi } from '@/services/api';
-import { Search, Filter, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronUp, CheckSquare, Square, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable
+} from '@dnd-kit/sortable';
 
 // Type definition for group deletion reassignment strategies
 type ReassignStrategy = 'unassign' | 'default';
@@ -40,6 +60,82 @@ interface ServerItemProps {
 function ServerItem({ server, isAssigned, onToggle, isLoading }: ServerItemProps) {
   return (
     <div className="group flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 transition-colors">
+      <Checkbox
+        id={`server-${server.id}`}
+        checked={isAssigned}
+        onCheckedChange={(checked) => onToggle(server.id, checked as boolean)}
+        disabled={isLoading}
+        aria-label={`Select ${server.name} (${server.ip})`}
+      />
+      <div className="flex-1 min-w-0">
+        <Label
+          htmlFor={`server-${server.id}`}
+          className="text-sm font-medium cursor-pointer truncate block"
+        >
+          {server.name}
+        </Label>
+        <div className="flex items-center space-x-2 text-xs text-gray-500">
+          <span>{server.ip}</span>
+          <span>•</span>
+          <span title={`Last checked: ${server.lastChecked}`}>
+            {server.lastChecked ? formatLastChecked(server.lastChecked) : 'Never'}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center space-x-2">
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+          server.isOnline
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {server.isOnline ? 'Online' : 'Offline'}
+        </span>
+        {isAssigned && (
+          <CheckSquare className="h-4 w-4 text-blue-600" aria-label="Selected" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Sortable Server Item for Drag and Drop
+interface SortableServerItemProps {
+  server: ServerData;
+  isAssigned: boolean;
+  onToggle: (serverId: string, checked: boolean) => void;
+  isLoading: boolean;
+}
+
+function SortableServerItem({ server, isAssigned, onToggle, isLoading }: SortableServerItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: server.id });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 transition-colors bg-white border border-gray-200"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded transition-colors"
+        aria-label={`Drag to reorder ${server.name}`}
+      >
+        <GripVertical className="h-4 w-4 text-gray-400" />
+      </div>
       <Checkbox
         id={`server-${server.id}`}
         checked={isAssigned}
@@ -155,6 +251,15 @@ export function GroupForm({
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reassignStrategy, setReassignStrategy] = useState<ReassignStrategy>('unassign');
+
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Compute dirty state (has unsaved changes)
   const isDirty = useMemo(() => {
@@ -535,6 +640,37 @@ export function GroupForm({
     setDeleteDialogOpen(false);
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over) {
+      setActiveId(null);
+      return;
+    }
+
+    if (active.id !== over.id) {
+      const oldIndex = formData.serverIds?.indexOf(active.id as string) ?? -1;
+      const newIndex = formData.serverIds?.indexOf(over.id as string) ?? -1;
+
+      if (oldIndex !== -1 && newIndex !== -1 && formData.serverIds) {
+        const newServerIds = arrayMove(formData.serverIds, oldIndex, newIndex);
+        setFormData(prev => ({ ...prev, serverIds: newServerIds }));
+      }
+    }
+
+    setActiveId(null);
+  };
+
+  // Get server by ID for drag overlay
+  const getServerById = (serverId: string): ServerData | undefined => {
+    return servers.find(server => server.id === serverId);
+  };
+
   // Calculate values for delete confirmation dialog
   const assignedServersCount = useMemo(() => {
     if (!selectedGroup?.serverIds) return 0;
@@ -549,6 +685,15 @@ export function GroupForm({
     if (!selectedGroup?.serverIds) return [];
     return servers.filter(server => selectedGroup.serverIds?.includes(server.id));
   }, [selectedGroup, servers]);
+
+  // Get assigned servers in the current order (for drag and drop)
+  const assignedServersInOrder = useMemo(() => {
+    if (!formData.serverIds || formData.serverIds.length === 0) return [];
+
+    return formData.serverIds
+      .map(serverId => getServerById(serverId))
+      .filter((server): server is ServerData => server !== undefined);
+  }, [formData.serverIds, servers]);
 
   const panelTitle = isAddMode ? 'Add New Group' : `Edit Group: ${selectedGroup?.name || groupName}`;
   const saveHandler = isAddMode ? handleSaveNewGroup : handleSaveExisting;
@@ -740,6 +885,57 @@ export function GroupForm({
                         Deselect All
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* Assigned Servers with Drag and Drop */}
+                {assignedServersInOrder.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm font-medium text-blue-800">
+                        Assigned Servers ({assignedServersInOrder.length})
+                        <span className="ml-2 font-normal text-blue-600">
+                          Drag to reorder
+                        </span>
+                      </div>
+                    </div>
+
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={assignedServersInOrder.map(server => server.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                          {assignedServersInOrder.map((server) => (
+                            <SortableServerItem
+                              key={server.id}
+                              server={server}
+                              isAssigned={true}
+                              onToggle={handleServerToggle}
+                              isLoading={isLoading}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+
+                      <DragOverlay>
+                        {activeId ? (
+                          <div className="transform rotate-3 opacity-95">
+                            <SortableServerItem
+                              server={getServerById(activeId)!}
+                              isAssigned={true}
+                              onToggle={handleServerToggle}
+                              isLoading={isLoading}
+                            />
+                          </div>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
                   </div>
                 )}
 
