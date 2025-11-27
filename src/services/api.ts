@@ -59,7 +59,7 @@ const API_BASE_URL = '/api';
 
 export class ApiService {
   private eventSource: EventSource | null = null;
-  private reconnectionTimeout: number | null = null;
+  private reconnectionTimeout: ReturnType<typeof setTimeout> | null = null;
   private onStatusUpdateCallback: ((servers: ServerData[]) => void) | null = null;
   private onGroupsUpdateCallback: ((groups: GroupConfig[]) => void) | null = null;
   private onServerRemovedCallback: ((serverId: string, serverName: string) => void) | null = null;

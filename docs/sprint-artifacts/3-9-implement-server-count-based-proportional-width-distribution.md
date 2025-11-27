@@ -1,6 +1,6 @@
 # Story 3.9: Implement Server-Count-Based Proportional Width Distribution
 
-Status: review
+Status: done
 
 ## Story
 

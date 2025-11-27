@@ -68,7 +68,7 @@ development_status:
   3-6-implement-delete-group-with-server-reassignment: done
   3-7-implement-group-name-validation: done
   3-8-implement-dynamic-group-row-layout-with-flexible-sizing: done
-  3-9-implement-server-count-based-proportional-width-distribution: review
+  3-9-implement-server-count-based-proportional-width-distribution: done
   epic-3-retrospective: optional
 
   epic-4: backlog

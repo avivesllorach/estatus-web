@@ -275,7 +275,7 @@ export function ConfigPage() {
     <ConfigLayout
       sidebar={
         <Sidebar
-          servers={servers}
+          servers={servers as any[]}
           groups={groups}
           isLoading={isLoading}
           error={error}
