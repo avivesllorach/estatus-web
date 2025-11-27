@@ -177,8 +177,12 @@ export function validateGroupConfig(config: any): ValidationErrors | null {
     errors.name = 'Group name is required';
   }
 
-  if (!config.order || typeof config.order !== 'number') {
-    errors.order = 'Display order is required';
+  if (!config.rowNumber || typeof config.rowNumber !== 'number') {
+    errors.rowNumber = 'Row number is required';
+  }
+
+  if (!config.rowOrder || typeof config.rowOrder !== 'number') {
+    errors.rowOrder = 'Row order is required';
   }
 
   if (!config.serverIds || !Array.isArray(config.serverIds)) {
@@ -198,11 +202,19 @@ export function validateGroupConfig(config: any): ValidationErrors | null {
     }
   }
 
-  // Order validation
-  if (config.order) {
-    const order = Number(config.order);
-    if (isNaN(order) || order < 1 || order > 100) {
-      errors.order = 'Display order must be a number between 1 and 100';
+  // Row Number validation
+  if (config.rowNumber) {
+    const rowNumber = Number(config.rowNumber);
+    if (isNaN(rowNumber) || rowNumber < 1 || rowNumber > 100) {
+      errors.rowNumber = 'Row number must be a number between 1 and 100';
+    }
+  }
+
+  // Row Order validation
+  if (config.rowOrder) {
+    const rowOrder = Number(config.rowOrder);
+    if (isNaN(rowOrder) || rowOrder < 1 || rowOrder > 100) {
+      errors.rowOrder = 'Row order must be a number between 1 and 100';
     }
   }
 
@@ -220,6 +232,35 @@ export function validateGroupConfig(config: any): ValidationErrors | null {
         errors.serverIds = 'All server IDs must be non-empty strings';
         break;
       }
+    }
+  }
+
+  // New flexible layout validation
+  if (config.rowNumber !== undefined) {
+    const rowNumber = Number(config.rowNumber);
+    if (isNaN(rowNumber) || rowNumber < 1 || rowNumber > 100) {
+      errors.rowNumber = 'Row number must be a number between 1 and 100';
+    }
+  }
+
+  if (config.rowOrder !== undefined) {
+    const rowOrder = Number(config.rowOrder);
+    if (isNaN(rowOrder) || rowOrder < 1 || rowOrder > 100) {
+      errors.rowOrder = 'Row order must be a number between 1 and 100';
+    }
+  }
+
+  // Legacy fields validation (for backward compatibility)
+  if (config.row !== undefined) {
+    const row = Number(config.row);
+    if (isNaN(row) || row < 1 || row > 4) {
+      errors.row = 'Row must be a number between 1 and 4';
+    }
+  }
+
+  if (config.position !== undefined) {
+    if (!['left', 'right'].includes(config.position)) {
+      errors.position = 'Position must be either "left" or "right"';
     }
   }
 

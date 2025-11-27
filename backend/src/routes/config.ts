@@ -5,12 +5,21 @@ import { ServerConfig } from '../types/server';
 import { writeConfigAtomic } from '../utils/fileUtils';
 import { validateServerConfig, validateGroupConfig } from '../utils/validation';
 import { ConfigManager } from '../services/ConfigManager';
+import { createLogger, generateChangeSummary } from '../utils/logger';
+import { detectServerChanges, detectGroupChanges } from '../utils/changeDetector';
+import { migrateLegacyGroups } from '../utils/groupMigration';
 
 interface GroupConfig {
   id: string;
   name: string;
-  order: number;
+  order: number;                    // DEPRECATED, for backward compatibility
+  row?: number;                     // 1-4 (which row the group belongs to) - DEPRECATED, use rowNumber
+  position?: 'left' | 'right';     // 'left' or 'right' position within the row - DEPRECATED, use rowOrder
   serverIds: string[];
+
+  // New flexible layout properties
+  rowNumber?: number;               // Which row the group belongs to (1, 2, 3, ...)
+  rowOrder?: number;                // Position within the row (1, 2, 3, ...) - determines left-to-right order
 }
 
 interface ApiResponse<T> {
@@ -21,6 +30,9 @@ interface ApiResponse<T> {
 
 const router = Router();
 
+// Create logger instance for config operations
+const logger = createLogger('Config API');
+
 // GET /api/config/groups - Read dashboard-layout.json and return groups
 // GET /api/config/servers - Read servers.json and return all server configs
 router.get('/servers', async (req: Request, res: Response) => {
@@ -30,14 +42,17 @@ router.get('/servers', async (req: Request, res: Response) => {
 
     const response: ApiResponse<ServerConfig[]> = {
       success: true,
-      data: servers
+      data: servers,
     };
     res.json(response);
   } catch (error) {
-    console.error('Failed to load servers:', error);
+    logger.error('Failed to load servers', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     const response: ApiResponse<never> = {
       success: false,
-      error: 'Failed to load servers'
+      error: 'Failed to load servers',
     };
     res.status(500).json(response);
   }
@@ -55,21 +70,25 @@ router.get('/servers/:id', async (req: Request, res: Response) => {
     if (!server) {
       const response: ApiResponse<never> = {
         success: false,
-        error: 'Server not found'
+        error: 'Server not found',
       };
       return res.status(404).json(response);
     }
 
     const response: ApiResponse<ServerConfig> = {
       success: true,
-      data: server
+      data: server,
     };
     res.json(response);
   } catch (error) {
-    console.error('Failed to load server:', error);
+    logger.error('Failed to load server', {
+      serverId: req.params.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     const response: ApiResponse<never> = {
       success: false,
-      error: 'Failed to load server'
+      error: 'Failed to load server',
     };
     res.status(500).json(response);
   }
@@ -85,7 +104,7 @@ router.get('/groups', async (req: Request, res: Response) => {
       // File doesn't exist yet (normal for fresh install)
       const response: ApiResponse<GroupConfig[]> = {
         success: true,
-        data: []
+        data: [],
       };
       return res.json(response);
     }
@@ -93,17 +112,43 @@ router.get('/groups', async (req: Request, res: Response) => {
     // Read and parse file
     const fileContent = await fs.readFile(CONFIG_PATHS.layout, 'utf-8');
     const layout = JSON.parse(fileContent);
+    let groups = layout.groups || [];
+
+    // Apply migration for legacy groups (row/position -> rowNumber/rowOrder)
+    if (groups.length > 0) {
+      groups = migrateLegacyGroups(groups);
+
+      // If migration occurred, update the file with new format
+      const needsMigration = groups.some((group, index) => {
+        const original = layout.groups[index];
+        return (
+          original.rowNumber !== group.rowNumber ||
+          original.rowOrder !== group.rowOrder
+        );
+      });
+
+      if (needsMigration) {
+        layout.groups = groups;
+        await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+        logger.info('Migrated groups to new rowNumber/rowOrder format', {
+          groupCount: groups.length
+        });
+      }
+    }
 
     const response: ApiResponse<GroupConfig[]> = {
       success: true,
-      data: layout.groups || []
+      data: groups,
     };
     res.json(response);
   } catch (error) {
-    console.error('Failed to load groups:', error);
+    logger.error('Failed to load groups', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     const response: ApiResponse<never> = {
       success: false,
-      error: 'Failed to load groups'
+      error: 'Failed to load groups',
     };
     res.status(500).json(response);
   }
@@ -124,20 +169,26 @@ router.get('/groups', async (req: Request, res: Response) => {
 router.post('/groups', async (req: Request, res: Response) => {
   const groupData = req.body as Omit<GroupConfig, 'id'>;
 
+  logger.info('POST /api/config/groups - Received group data:', {
+    groupData,
+    hasRowNumber: !!groupData.rowNumber,
+    hasRowOrder: !!groupData.rowOrder,
+    rowNumber: groupData.rowNumber,
+    rowOrder: groupData.rowOrder
+  });
+
   try {
     // Validate request data
     const tempGroupData: GroupConfig = {
       ...groupData,
-      id: 'temp-id' // Temporary ID for validation (will be replaced)
+      id: 'temp-id', // Temporary ID for validation (will be replaced)
+      // Add backward compatibility fields
+      order: groupData.order || 1, // Default order for backward compatibility
     };
 
     const validationErrors = validateGroupConfig(tempGroupData);
     if (validationErrors) {
-      console.warn('[Config API] Validation failed for group creation', {
-        groupName: groupData.name,
-        errors: validationErrors,
-        timestamp: new Date().toISOString(),
-      });
+      logger.logValidationFailure('GROUP', 'create', validationErrors, groupData);
 
       const response: ApiResponse<any> = {
         success: false,
@@ -164,7 +215,7 @@ router.post('/groups', async (req: Request, res: Response) => {
 
     // Check for group name uniqueness (case-insensitive)
     const existingGroupWithSameName = layout.groups.find(
-      (g) => g.name.toLowerCase() === groupData.name.toLowerCase().trim()
+      (g) => g.name.toLowerCase() === groupData.name.toLowerCase().trim(),
     );
 
     if (existingGroupWithSameName) {
@@ -192,34 +243,51 @@ router.post('/groups', async (req: Request, res: Response) => {
       id: newGroupId,
       name: groupData.name.trim(),
       order: Math.max(1, Math.min(100, Number(groupData.order))), // Clamp between 1-100
+      row: groupData.row ? Math.max(1, Math.min(4, Number(groupData.row))) : undefined, // Clamp between 1-4
+      position: groupData.position && ['left', 'right'].includes(groupData.position) ? groupData.position : undefined,
       serverIds: Array.isArray(groupData.serverIds) ? [...new Set(groupData.serverIds)] : [], // Remove duplicates
+      // Add new layout fields
+      rowNumber: groupData.rowNumber ? Math.max(1, Math.min(100, Number(groupData.rowNumber))) : 1,
+      rowOrder: groupData.rowOrder ? Math.max(1, Math.min(100, Number(groupData.rowOrder))) : 1,
     };
 
+    
     // Add group to array
     layout.groups.push(sanitizedGroupData);
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      beforeState: layout,
+    });
+
     // Write updated layout atomically
     await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      afterState: layout,
+    });
 
     // Trigger hot-reload after successful file write
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering hot-reload after group creation');
+        logger.debug('Triggering hot-reload after group creation');
         await configManager.reloadGroups();
+        logger.debug('Hot-reload completed successfully after group creation');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger hot-reload after group creation:', reloadError);
+        logger.error('Failed to trigger hot-reload after group creation', {
+          groupId: newGroupId,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
 
-    console.info('[Config API] Group created successfully', {
-      groupId: newGroupId,
-      name: sanitizedGroupData.name,
-      order: sanitizedGroupData.order,
-      serverCount: sanitizedGroupData.serverIds.length,
-      timestamp: new Date().toISOString(),
-    });
+    // Log successful group creation
+    logger.logConfigChange('ADDED', 'GROUP', newGroupId, sanitizedGroupData.name);
 
     // Return success with created group
     const response: ApiResponse<GroupConfig> = {
@@ -228,10 +296,10 @@ router.post('/groups', async (req: Request, res: Response) => {
     };
     res.status(201).json(response);
   } catch (error) {
-    console.error('[Config API] Group creation failed', {
+    logger.error('Group creation failed', {
       groupName: groupData.name,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {
@@ -263,11 +331,7 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
     // Validate request data
     const validationErrors = validateGroupConfig(groupData);
     if (validationErrors) {
-      console.warn('[Config API] Validation failed for group update', {
-        groupId: id,
-        errors: validationErrors,
-        timestamp: new Date().toISOString(),
-      });
+      logger.logValidationFailure('GROUP', 'update', validationErrors, groupData);
 
       const response: ApiResponse<any> = {
         success: false,
@@ -304,9 +368,8 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
     // Find group by ID
     const groupIndex = layout.groups.findIndex((g) => g.id === id);
     if (groupIndex === -1) {
-      console.warn('[Config API] Group not found for update', {
+      logger.warn('Group not found for update', {
         groupId: id,
-        timestamp: new Date().toISOString(),
       });
 
       const response: ApiResponse<never> = {
@@ -316,9 +379,12 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
       return res.status(404).json(response);
     }
 
+    // Detect changes for logging
+    const originalGroup = layout.groups[groupIndex];
+
     // Check for group name uniqueness (case-insensitive)
     const existingGroupWithSameName = layout.groups.find(
-      (g) => g.id !== id && g.name.toLowerCase() === groupData.name.toLowerCase().trim()
+      (g) => g.id !== id && g.name.toLowerCase() === groupData.name.toLowerCase().trim(),
     );
 
     if (existingGroupWithSameName) {
@@ -334,34 +400,53 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
       id: groupData.id,
       name: groupData.name.trim(),
       order: Math.max(1, Math.min(100, Number(groupData.order))), // Clamp between 1-100
+      row: groupData.row ? Math.max(1, Math.min(4, Number(groupData.row))) : undefined, // Clamp between 1-4
+      position: groupData.position && ['left', 'right'].includes(groupData.position) ? groupData.position : undefined,
       serverIds: Array.isArray(groupData.serverIds) ? [...new Set(groupData.serverIds)] : [], // Remove duplicates
+      // Add new layout fields
+      rowNumber: groupData.rowNumber ? Math.max(1, Math.min(100, Number(groupData.rowNumber))) : 1,
+      rowOrder: groupData.rowOrder ? Math.max(1, Math.min(100, Number(groupData.rowOrder))) : 1,
     };
+
+    // Detect changes after sanitization
+    const detectedChanges = detectGroupChanges(originalGroup, sanitizedGroupData);
 
     // Update group in array
     layout.groups[groupIndex] = sanitizedGroupData;
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      beforeState: layout,
+    });
+
     // Write updated layout atomically
     await writeConfigAtomic(CONFIG_PATHS.layout, layout);
+
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      afterState: layout,
+    });
 
     // Trigger hot-reload after successful file write
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering hot-reload after group update');
+        logger.debug('Triggering hot-reload after group update');
         await configManager.reloadGroups();
+        logger.debug('Hot-reload completed successfully after group update');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger hot-reload after group update:', reloadError);
+        logger.error('Failed to trigger hot-reload after group update', {
+          groupId: id,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
 
-    console.info('[Config API] Group updated successfully', {
-      groupId: id,
-      name: sanitizedGroupData.name,
-      order: sanitizedGroupData.order,
-      serverCount: sanitizedGroupData.serverIds.length,
-      timestamp: new Date().toISOString(),
-    });
+    // Log successful group update with changes
+    logger.logConfigChange('UPDATED', 'GROUP', id, sanitizedGroupData.name, detectedChanges);
 
     // Return success with updated group
     const response: ApiResponse<GroupConfig> = {
@@ -370,10 +455,10 @@ router.put('/groups/:id', async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('[Config API] Group update failed', {
+    logger.error('Group update failed', {
       groupId: id,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {
@@ -430,9 +515,8 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
       }
     } catch (error) {
       // File doesn't exist or is invalid
-      console.warn('[Config API] Layout file not found for group deletion', {
+      logger.warn('Layout file not found for group deletion', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
       });
 
       const response: ApiResponse<never> = {
@@ -445,9 +529,8 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
     // Find group by ID
     const groupIndex = layout.groups.findIndex((g) => g.id === id);
     if (groupIndex === -1) {
-      console.warn('[Config API] Group not found for deletion', {
+      logger.warn('Group not found for deletion', {
         groupId: id,
-        timestamp: new Date().toISOString(),
       });
 
       const response: ApiResponse<never> = {
@@ -465,11 +548,11 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
     if (serverIdsToReassign.length > 0) {
       if (reassignStrategy === 'unassign') {
         // Strategy: "unassign" - servers become unassigned (removed from all groups)
-        console.info('[Config API] Unassigning servers from deleted group', {
+        logger.info('Unassigning servers from deleted group', {
           groupId: id,
           serverCount: serverIdsToReassign.length,
           strategy: 'unassign',
-          timestamp: new Date().toISOString(),
+          serverIds: serverIdsToReassign,
         });
 
         // No action needed - servers will be removed when we delete the group
@@ -481,16 +564,15 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
 
         if (otherGroups.length === 0) {
           // No other groups exist, fall back to unassign
-          console.warn('[Config API] No other groups available for reassignment, using unassign strategy', {
+          logger.warn('No other groups available for reassignment, using unassign strategy', {
             groupId: id,
             serverCount: serverIdsToReassign.length,
-            timestamp: new Date().toISOString(),
           });
           reassignedServers = serverIdsToReassign;
         } else {
           // Find the group with the lowest order value (first in display)
           const targetGroup = otherGroups.reduce((prev, current) =>
-            (prev.order < current.order) ? prev : current
+            (prev.order < current.order) ? prev : current,
           );
 
           // Add servers to the target group (avoid duplicates)
@@ -500,13 +582,13 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
 
           reassignedServers = serverIdsToReassign; // All servers were reassigned
 
-          console.info('[Config API] Servers reassigned to default group', {
+          logger.info('Servers reassigned to default group', {
             groupId: id,
             targetGroupId: targetGroup.id,
             targetGroupName: targetGroup.name,
             reassignedCount: newServerIds.length,
             totalServers: serverIdsToReassign.length,
-            timestamp: new Date().toISOString(),
+            reassignedServers: newServerIds,
           });
         }
       } else {
@@ -518,26 +600,36 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
     // Remove the group from array
     layout.groups = layout.groups.filter(g => g.id !== id);
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      beforeState: layout,
+    });
+
     // Write updated layout atomically
     await writeConfigAtomic(CONFIG_PATHS.layout, layout);
 
-    console.info('[Config API] Group deleted successfully', {
-      groupId: id,
-      groupName: deletedGroup.name,
-      serverCount: serverIdsToReassign.length,
-      reassignedCount: reassignedServers.length,
-      strategy: reassignStrategy || 'unassign',
-      timestamp: new Date().toISOString(),
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+      success: true,
+      afterState: layout,
     });
+
+    // Log successful group deletion
+    logger.logConfigChange('DELETED', 'GROUP', id, deletedGroup.name);
 
     // Trigger ConfigManager groups-changed event for real-time updates
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering groups-changed event after group deletion');
+        logger.debug('Triggering groups-changed event after group deletion');
         await configManager.reloadGroups();
+        logger.debug('Groups-changed event completed successfully after group deletion');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger groups-changed event after group deletion:', reloadError);
+        logger.error('Failed to trigger groups-changed event after group deletion', {
+          groupId: id,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
@@ -552,11 +644,11 @@ router.delete('/groups/:id', async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('[Config API] Group deletion failed', {
+    logger.error('Group deletion failed', {
       groupId: id,
       reassignStrategy,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {
@@ -587,10 +679,7 @@ router.post('/servers', async (req: Request, res: Response) => {
     // Validate request data
     const validationErrors = validateServerConfig(serverData);
     if (validationErrors) {
-      console.warn('[Config API] Validation failed for server creation', {
-        errors: validationErrors,
-        timestamp: new Date().toISOString(),
-      });
+      logger.logValidationFailure('SERVER', 'create', validationErrors, serverData);
 
       const response: ApiResponse<any> = {
         success: false,
@@ -608,9 +697,9 @@ router.post('/servers', async (req: Request, res: Response) => {
     if (serverData.id) {
       const isDuplicate = servers.some(s => s.id === serverData.id);
       if (isDuplicate) {
-        console.warn('[Config API] Duplicate server ID detected', {
+        logger.warn('Duplicate server ID detected', {
           serverId: serverData.id,
-          timestamp: new Date().toISOString(),
+          serverName: serverData.name,
         });
 
         const response: ApiResponse<any> = {
@@ -641,26 +730,39 @@ router.post('/servers', async (req: Request, res: Response) => {
     // Append new server to array
     servers.push(serverData);
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      beforeState: servers,
+    });
+
     // Write updated array atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      afterState: servers,
+    });
 
     // Trigger hot-reload after successful file write
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering hot-reload after server creation');
+        logger.debug('Triggering hot-reload after server creation');
         await configManager.reloadServers();
+        logger.debug('Hot-reload completed successfully after server creation');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger hot-reload after server creation:', reloadError);
+        logger.error('Failed to trigger hot-reload after server creation', {
+          serverId: serverData.id,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
 
-    console.info('[Config API] Server created successfully', {
-      serverId: serverData.id,
-      name: serverData.name,
-      timestamp: new Date().toISOString(),
-    });
+    // Log successful server creation
+    logger.logConfigChange('ADDED', 'SERVER', serverData.id, serverData.name);
 
     // Return success with new server (including generated ID)
     const response: ApiResponse<ServerConfig> = {
@@ -669,9 +771,11 @@ router.post('/servers', async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('[Config API] Server creation failed', {
+    logger.error('Server creation failed', {
+      serverName: serverData.name,
+      serverId: serverData.id,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {
@@ -703,11 +807,7 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     // Validate request data
     const validationErrors = validateServerConfig(serverData);
     if (validationErrors) {
-      console.warn('[Config API] Validation failed for server update', {
-        serverId: id,
-        errors: validationErrors,
-        timestamp: new Date().toISOString(),
-      });
+      logger.logValidationFailure('SERVER', 'update', validationErrors, serverData);
 
       const response: ApiResponse<any> = {
         success: false,
@@ -733,9 +833,8 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     // Find server by ID
     const serverIndex = servers.findIndex((s) => s.id === id);
     if (serverIndex === -1) {
-      console.warn('[Config API] Server not found for update', {
+      logger.warn('Server not found for update', {
         serverId: id,
-        timestamp: new Date().toISOString(),
       });
 
       const response: ApiResponse<never> = {
@@ -745,29 +844,46 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
       return res.status(404).json(response);
     }
 
+    // Detect changes for logging
+    const originalServer = servers[serverIndex];
+    const detectedChanges = detectServerChanges(originalServer, serverData);
+
     // Update server in array
     servers[serverIndex] = serverData;
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      beforeState: servers,
+    });
+
     // Write updated array atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      afterState: servers,
+    });
 
     // Trigger hot-reload after successful file write
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering hot-reload after server update');
+        logger.debug('Triggering hot-reload after server update');
         await configManager.reloadServers();
+        logger.debug('Hot-reload completed successfully after server update');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger hot-reload after server update:', reloadError);
+        logger.error('Failed to trigger hot-reload after server update', {
+          serverId: id,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
 
-    console.info('[Config API] Server updated successfully', {
-      serverId: id,
-      name: serverData.name,
-      timestamp: new Date().toISOString(),
-    });
+    // Log successful server update with changes
+    logger.logConfigChange('UPDATED', 'SERVER', id, serverData.name, detectedChanges);
 
     // Return success with updated server
     const response: ApiResponse<ServerConfig> = {
@@ -776,10 +892,11 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('[Config API] Server update failed', {
+    logger.error('Server update failed', {
       serverId: id,
+      serverName: serverData.name,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {
@@ -816,9 +933,8 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     // Find server by ID
     const serverIndex = servers.findIndex(s => s.id === id);
     if (serverIndex === -1) {
-      console.warn('[Config API] Server not found for deletion', {
+      logger.warn('Server not found for deletion', {
         serverId: id,
-        timestamp: new Date().toISOString(),
       });
 
       const response: ApiResponse<never> = {
@@ -833,20 +949,39 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     // Remove server from array
     servers = servers.filter(s => s.id !== id);
 
+    // Log before file write operation
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      beforeState: servers,
+    });
+
     // Write updated servers.json atomically
     await writeConfigAtomic(CONFIG_PATHS.servers, servers);
+
+    // Log successful file write
+    logger.logFileOperation('WRITE', CONFIG_PATHS.servers, {
+      success: true,
+      afterState: servers,
+    });
 
     // Trigger hot-reload after successful file write
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        console.log('[Config API] Triggering hot-reload after server deletion');
+        logger.debug('Triggering hot-reload after server deletion');
         await configManager.reloadServers();
+        logger.debug('Hot-reload completed successfully after server deletion');
       } catch (reloadError) {
-        console.error('[Config API] Failed to trigger hot-reload after server deletion:', reloadError);
+        logger.error('Failed to trigger hot-reload after server deletion', {
+          serverId: id,
+          error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
+        });
         // Don't fail the request, just log the error
       }
     }
+
+    // Log successful server deletion
+    logger.logConfigChange('DELETED', 'SERVER', id, deletedServer.name);
 
     // Clean up group references (referential integrity)
     // Remove serverId from all groups in dashboard-layout.json
@@ -872,33 +1007,39 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
           return group;
         });
 
+        // Log before layout file write
+        logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+          success: true,
+          beforeState: layout,
+        });
+
         // Write updated layout atomically
         await writeConfigAtomic(CONFIG_PATHS.layout, layout);
 
-        
+        // Log successful layout file write
+        logger.logFileOperation('WRITE', CONFIG_PATHS.layout, {
+          success: true,
+          afterState: layout,
+        });
+
         if (affectedGroups.length > 0) {
-          console.info('[Config API] Server removed from groups', {
+          logger.info('Server removed from groups', {
             serverId: id,
+            serverName: deletedServer.name,
             affectedGroups,
-            timestamp: new Date().toISOString(),
+            affectedGroupCount: affectedGroups.length,
           });
         }
       }
     } catch (error) {
       // dashboard-layout.json might not exist yet (Epic 3 not implemented)
       // This is not a fatal error - just log a warning
-      console.warn('[Config API] Could not clean up group references (file may not exist)', {
+      logger.warn('Could not clean up group references (file may not exist)', {
         serverId: id,
+        serverName: deletedServer.name,
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
       });
     }
-
-    console.info('[Config API] Server deleted successfully', {
-      serverId: id,
-      name: deletedServer.name,
-      timestamp: new Date().toISOString(),
-    });
 
     // Return success with deleted ID
     const response: ApiResponse<{ deletedId: string }> = {
@@ -907,10 +1048,10 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('[Config API] Server deletion failed', {
+    logger.error('Server deletion failed', {
       serverId: id,
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     const response: ApiResponse<never> = {

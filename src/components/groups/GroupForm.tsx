@@ -83,7 +83,8 @@ function createEmptyGroupConfig(): Partial<GroupConfig> {
   return {
     id: '',
     name: '',
-    order: 1,
+    rowNumber: 1,
+    rowOrder: 1,
     serverIds: []
   };
 }
@@ -125,7 +126,8 @@ export function GroupForm({
   const [formData, setFormData] = useState<Partial<GroupConfig>>({
     id: selectedGroup?.id || '',
     name: selectedGroup?.name || '',
-    order: selectedGroup?.order || 1,
+    rowNumber: selectedGroup?.rowNumber || 1,
+    rowOrder: selectedGroup?.rowOrder || 1,
     serverIds: selectedGroup?.serverIds || []
   });
 
@@ -133,7 +135,8 @@ export function GroupForm({
   const [initialData, setInitialData] = useState<Partial<GroupConfig>>({
     id: selectedGroup?.id || '',
     name: selectedGroup?.name || '',
-    order: selectedGroup?.order || 1,
+    rowNumber: selectedGroup?.rowNumber || 1,
+    rowOrder: selectedGroup?.rowOrder || 1,
     serverIds: selectedGroup?.serverIds || []
   });
 
@@ -232,22 +235,15 @@ export function GroupForm({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleSelectAll, handleDeselectAll]);
 
-  // Calculate next available display order for add mode
-  const getNextAvailableOrder = useCallback(() => {
-    if (groups.length === 0) return 1;
-    const maxOrder = Math.max(...groups.map(g => g.order));
-    return Math.min(maxOrder + 1, 100); // Cap at 100 as per validation
-  }, [groups]);
-
+  
   // Ref for auto-focus on Group Name field in add mode
   const groupNameInputRef = useRef<HTMLInputElement>(null);
 
   // Load data when group changes
   useEffect(() => {
     if (isAddMode) {
-      // Add mode: clear form with empty template and set default order
+      // Add mode: clear form with empty template and set default row/order values
       const emptyData = createEmptyGroupConfig();
-      emptyData.order = getNextAvailableOrder();
       setFormData(emptyData);
       setInitialData(emptyData);
       setValidationErrors({});
@@ -263,13 +259,14 @@ export function GroupForm({
       const groupData = {
         id: selectedGroup.id,
         name: selectedGroup.name,
-        order: selectedGroup.order,
+        rowNumber: selectedGroup.rowNumber || 1,
+        rowOrder: selectedGroup.rowOrder || 1,
         serverIds: selectedGroup.serverIds
       };
       setFormData(groupData);
       setInitialData(groupData);
     }
-  }, [isAddMode, selectedGroup?.id, groupId, getNextAvailableOrder]);
+  }, [isAddMode, selectedGroup?.id, groupId]);
 
   const handleFieldChange = (field: keyof GroupConfig, value: string | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -293,30 +290,7 @@ export function GroupForm({
     }));
   };
 
-  // Display order increment/decrement handlers
-  const handleIncrementOrder = () => {
-    const currentValue = formData.order || 1;
-    const newValue = Math.min(currentValue + 1, 100); // Maximum 100 as per validation
-    handleFieldChange('order', newValue);
-  };
-
-  const handleDecrementOrder = () => {
-    const currentValue = formData.order || 1;
-    const newValue = Math.max(currentValue - 1, 1); // Minimum 1 as per validation
-    handleFieldChange('order', newValue);
-  };
-
-  // Keyboard navigation for order field
-  const handleOrderKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      handleIncrementOrder();
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      handleDecrementOrder();
-    }
-  };
-
+  
   // Validate group data
   const validateGroup = (data: Partial<GroupConfig>): Record<string, string | null> => {
     const errors: Record<string, string | null> = {};
@@ -338,9 +312,14 @@ export function GroupForm({
       }
     }
 
-    // Order validation
-    if (!data.order || data.order < 1 || data.order > 100) {
-      errors.order = 'Order must be between 1 and 100';
+    // Row Number validation
+    if (!data.rowNumber || data.rowNumber < 1 || data.rowNumber > 100) {
+      errors.rowNumber = 'Row number must be between 1 and 100';
+    }
+
+    // Row Order validation
+    if (!data.rowOrder || data.rowOrder < 1 || data.rowOrder > 100) {
+      errors.rowOrder = 'Row order must be between 1 and 100';
     }
 
     // Server IDs validation (all serverIds must exist in servers list)
@@ -443,6 +422,11 @@ export function GroupForm({
     setIsLoading(true);
 
     try {
+      // Debug: Log the form data being sent
+      console.log('🔍 DEBUG: Creating group with form data:', formData);
+      console.log('🔍 DEBUG: Form data rowNumber:', formData.rowNumber);
+      console.log('🔍 DEBUG: Form data rowOrder:', formData.rowOrder);
+
       // Call API to create group
       await configApi.createGroup(formData as Omit<GroupConfig, 'id'>);
 
@@ -585,7 +569,8 @@ export function GroupForm({
       <div className="flex-1 overflow-y-auto p-6">
         {/* Basic Group Information */}
         <FormSection title="Group Information">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
             <FormGroup
               label="Group Name"
               required
@@ -602,55 +587,45 @@ export function GroupForm({
                 disabled={isLoading}
               />
             </FormGroup>
+            </div>
+
+            {/* New Flexible Layout Fields */}
+            <FormGroup
+              label="Row Number"
+              error={validationErrors.rowNumber}
+              htmlFor="group-row-number"
+              helperText="Which row this group belongs to (1, 2, 3, ...)"
+            >
+              <Input
+                id="group-row-number"
+                type="number"
+                min="1"
+                max="100"
+                value={formData.rowNumber || 1}
+                onChange={(e) => handleFieldChange('rowNumber', parseInt(e.target.value) || 1)}
+                disabled={isLoading}
+                placeholder="e.g., 1"
+                aria-label="Row number value"
+              />
+            </FormGroup>
 
             <FormGroup
-              label="Display Order"
-              error={validationErrors.order}
-              htmlFor="group-order"
-              helperText="Groups are displayed on the dashboard in ascending order"
+              label="Row Order"
+              error={validationErrors.rowOrder}
+              htmlFor="group-row-order"
+              helperText="Position within the row (1, 2, 3, ...) - determines left-to-right order"
             >
-              <div className="flex items-center space-x-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="group-order"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.order || 1}
-                    onChange={(e) => handleFieldChange('order', parseInt(e.target.value) || 1)}
-                    onKeyDown={handleOrderKeyDown}
-                    disabled={isLoading}
-                    aria-label="Display order value"
-                    className="pr-20"
-                  />
-                  <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center space-x-0.5">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
-                      onClick={handleDecrementOrder}
-                      disabled={isLoading || (formData.order || 1) <= 1}
-                      aria-label="Decrease display order"
-                      tabIndex={-1}
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
-                      onClick={handleIncrementOrder}
-                      disabled={isLoading || (formData.order || 1) >= 100}
-                      aria-label="Increase display order"
-                      tabIndex={-1}
-                    >
-                      <ChevronUp className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <Input
+                id="group-row-order"
+                type="number"
+                min="1"
+                max="100"
+                value={formData.rowOrder || 1}
+                onChange={(e) => handleFieldChange('rowOrder', parseInt(e.target.value) || 1)}
+                disabled={isLoading}
+                placeholder="e.g., 1"
+                aria-label="Row order value"
+              />
             </FormGroup>
           </div>
         </FormSection>
@@ -930,7 +905,7 @@ export function GroupForm({
                         Move to first available group
                       </Label>
                       <p className="text-sm text-gray-600 mt-1">
-                        Servers will be moved to the group with the lowest display order.
+                        Servers will be moved to the first available group.
                       </p>
                     </div>
                   </div>
