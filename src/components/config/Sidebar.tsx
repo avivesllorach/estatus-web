@@ -71,21 +71,23 @@ export function Sidebar({
   return (
     <div className="flex flex-col h-full">
       {/* SERVERS Section */}
-      <div className="px-4 py-3">
-        <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
-          SERVERS
-        </h3>
+      <div className="flex flex-col flex-shrink-0">
+        <div className="px-4 py-3">
+          <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+            SERVERS
+          </h3>
 
-        {/* Add Server button */}
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full mb-3"
-          onClick={onAddServerClick}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Server
-        </Button>
+          {/* Add Server button */}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full mb-3"
+            onClick={onAddServerClick}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Server
+          </Button>
+        </div>
 
         {error ? (
           <div className="px-4 py-6 text-sm text-red-600 text-center">
@@ -100,67 +102,73 @@ export function Sidebar({
             No servers configured yet
           </div>
         ) : (
-          <ScrollArea className="h-[calc(50vh-150px)] scroll-area-smooth">
-            <div
-              className="flex flex-col gap-2 sidebar-section"
-              role="list"
-              aria-label="Server list"
-              onKeyDown={handleServerKeyDown}
-            >
-              {servers.map((server, index) => (
-                <ServerListItem
-                  key={server.id}
-                  ref={(el) => (serverRefs.current[index] = el)}
-                  server={{ id: server.id, name: server.name, ip: server.ip }}
-                  isActive={selectedServerId === server.id}
-                  onClick={() => onSelectServer(server.id)}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="px-4">
+            <ScrollArea className="h-64 scroll-area-smooth">
+              <div
+                className="flex flex-col gap-2 sidebar-section"
+                role="list"
+                aria-label="Server list"
+                onKeyDown={handleServerKeyDown}
+              >
+                {servers.map((server, index) => (
+                  <ServerListItem
+                    key={server.id}
+                    ref={(el) => (serverRefs.current[index] = el)}
+                    server={{ id: server.id, name: server.name, ip: server.ip }}
+                    isActive={selectedServerId === server.id}
+                    onClick={() => onSelectServer(server.id)}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         )}
       </div>
 
-      {/* GROUPS Section */}
-      <div className="px-4 py-3 mt-6">
-        <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
-          GROUPS
-        </h3>
+      {/* GROUPS Section - takes remaining space */}
+      <div className="flex flex-col flex-1 min-h-0 mt-6">
+        <div className="px-4 py-3">
+          <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+            GROUPS
+          </h3>
 
-        {/* Add Group button */}
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full mb-3"
-          onClick={onAddGroupClick}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Group
-        </Button>
+          {/* Add Group button */}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full mb-3"
+            onClick={onAddGroupClick}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Group
+          </Button>
+        </div>
 
         {groups.length === 0 ? (
           <div className="px-4 py-6 text-sm text-gray-500 text-center">
             No groups created yet.
           </div>
         ) : (
-          <ScrollArea className="h-[calc(50vh-150px)] scroll-area-smooth">
-            <div
-              className="flex flex-col gap-2 sidebar-section"
-              role="list"
-              aria-label="Group list"
-              onKeyDown={handleGroupKeyDown}
-            >
-              {groups.map((group, index) => (
-                <GroupListItem
-                  key={group.id}
-                  ref={(el) => (groupRefs.current[index] = el)}
-                  group={group}
-                  isActive={selectedGroupId === group.id}
-                  onClick={() => onSelectGroup(group.id)}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="px-4 flex-1 min-h-0">
+            <ScrollArea className="h-full scroll-area-smooth">
+              <div
+                className="flex flex-col gap-2 sidebar-section"
+                role="list"
+                aria-label="Group list"
+                onKeyDown={handleGroupKeyDown}
+              >
+                {groups.map((group, index) => (
+                  <GroupListItem
+                    key={group.id}
+                    ref={(el) => (groupRefs.current[index] = el)}
+                    group={group}
+                    isActive={selectedGroupId === group.id}
+                    onClick={() => onSelectGroup(group.id)}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         )}
       </div>
     </div>

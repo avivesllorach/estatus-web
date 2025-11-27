@@ -1,5 +1,5 @@
 import { promises as fs, constants } from 'fs';
-import path from 'path';
+import * as path from 'path';
 
 /**
  * Atomic file write utility using temp file + rename pattern

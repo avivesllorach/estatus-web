@@ -16,21 +16,21 @@ describe('PingService Delta Configuration Tests', () => {
     const mockPing = require('ping');
     mockPing.promise.probe.mockResolvedValue({
       alive: true,
-      time: 10
+      time: 10,
     });
 
     // Mock SNMP service
     const mockSnmpService = require('../../services/snmpService');
     mockSnmpService.SnmpService.getDiskInfo.mockResolvedValue({
       success: true,
-      diskInfo: []
+      diskInfo: [],
     });
 
     // Mock NetApp service
     const mockNetappService = require('../../services/netappService');
     mockNetappService.NetAppService.getLunInfo.mockResolvedValue({
       success: true,
-      diskInfo: []
+      diskInfo: [],
     });
   });
 
@@ -46,14 +46,14 @@ describe('PingService Delta Configuration Tests', () => {
       id: 'server-1',
       name: 'Server 1',
       ip: '192.168.1.1',
-      dnsAddress: 'server1.example.com'
+      dnsAddress: 'server1.example.com',
     },
     {
       id: 'server-2',
       name: 'Server 2',
       ip: '192.168.1.2',
-      dnsAddress: 'server2.example.com'
-    }
+      dnsAddress: 'server2.example.com',
+    },
   ];
 
   it('should add new servers without interrupting existing monitoring', async () => {
@@ -71,7 +71,7 @@ describe('PingService Delta Configuration Tests', () => {
       id: 'server-3',
       name: 'Server 3',
       ip: '192.168.1.3',
-      dnsAddress: 'server3.example.com'
+      dnsAddress: 'server3.example.com',
     };
 
     await pingService.onConfigChange([...initialServers, newServer]);
@@ -125,8 +125,8 @@ describe('PingService Delta Configuration Tests', () => {
       {
         ...initialServers[1],
         name: 'Server 2 Updated',
-        ip: '192.168.1.20'
-      }
+        ip: '192.168.1.20',
+      },
     ];
 
     await pingService.onConfigChange(updatedServers);
@@ -171,8 +171,8 @@ describe('PingService Delta Configuration Tests', () => {
           id: `rapid-server-${i}`,
           name: `Rapid Server ${i}`,
           ip: `192.168.1.${10 + i}`,
-          dnsAddress: `rapid${i}.example.com`
-        }
+          dnsAddress: `rapid${i}.example.com`,
+        },
       ];
 
       await pingService.onConfigChange(configWithNewServer);
@@ -204,14 +204,14 @@ describe('PingService Delta Configuration Tests', () => {
         id: 'concurrent-1',
         name: 'Concurrent Server 1',
         ip: '192.168.1.3',
-        dnsAddress: 'concurrent1.example.com'
+        dnsAddress: 'concurrent1.example.com',
       }],
       [...initialServers, {
         id: 'concurrent-2',
         name: 'Concurrent Server 2',
         ip: '192.168.1.4',
-        dnsAddress: 'concurrent2.example.com'
-      }]
+        dnsAddress: 'concurrent2.example.com',
+      }],
     ];
 
     // Execute changes concurrently

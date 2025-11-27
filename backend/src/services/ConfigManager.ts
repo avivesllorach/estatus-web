@@ -3,12 +3,20 @@ import { promises as fs } from 'fs';
 import { ServerConfig } from '../types/server';
 import { CONFIG_PATHS } from '../config/file-paths';
 import { readConfigFile } from '../utils/fileUtils';
+import { migrateLegacyGroups } from '../utils/groupMigration';
 
+// Use the same GroupConfig interface as in routes/config.ts for consistency
 interface GroupConfig {
   id: string;
   name: string;
-  order: number;
+  order: number;                    // DEPRECATED, for backward compatibility
+  row?: number;                     // 1-4 (which row the group belongs to) - DEPRECATED, use rowNumber
+  position?: 'left' | 'right';     // 'left' or 'right' position within the row - DEPRECATED, use rowOrder
   serverIds: string[];
+
+  // New flexible layout properties
+  rowNumber?: number;               // Which row the group belongs to (1, 2, 3, ...)
+  rowOrder?: number;                // Position within the row (1, 2, 3, ...) - determines left-to-right order
 }
 
 interface ConfigReloadResult {
@@ -105,7 +113,7 @@ export class ConfigManager extends EventEmitter {
         this.emit('servers-changed', {
           servers: newServers,
           delta,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
 
         // Also emit specific events for different change types
@@ -125,7 +133,7 @@ export class ConfigManager extends EventEmitter {
       return {
         success: true,
         reloadTime,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
     } catch (error) {
@@ -136,14 +144,14 @@ export class ConfigManager extends EventEmitter {
       this.emit('config-error', {
         type: 'servers',
         error: errorMsg,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       return {
         success: false,
         error: errorMsg,
         reloadTime: Date.now() - startTime,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -159,7 +167,13 @@ export class ConfigManager extends EventEmitter {
       console.log(`🔄 Reloading groups configuration from ${CONFIG_PATHS.layout}...`);
 
       const layoutData = await readConfigFile<{ groups: GroupConfig[] }>(CONFIG_PATHS.layout);
-      const newGroups = layoutData.groups || [];
+      let newGroups = layoutData.groups || [];
+
+      // Apply migration for legacy groups (row/position -> rowNumber/rowOrder)
+      if (newGroups.length > 0) {
+        newGroups = migrateLegacyGroups(newGroups);
+      }
+
       const hasChanges = this.hasGroupsChanged(this.currentGroups, newGroups);
 
       // Update configuration
@@ -174,7 +188,7 @@ export class ConfigManager extends EventEmitter {
         // Emit change event
         this.emit('groups-changed', {
           groups: newGroups,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       } else {
         console.log(`ℹ️  Groups configuration reloaded but no changes detected (${reloadTime}ms)`);
@@ -183,7 +197,7 @@ export class ConfigManager extends EventEmitter {
       return {
         success: true,
         reloadTime,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
     } catch (error) {
@@ -194,14 +208,14 @@ export class ConfigManager extends EventEmitter {
       this.emit('config-error', {
         type: 'groups',
         error: errorMsg,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       return {
         success: false,
         error: errorMsg,
         reloadTime: Date.now() - startTime,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -213,13 +227,13 @@ export class ConfigManager extends EventEmitter {
     servers: ConfigReloadResult;
     groups: ConfigReloadResult;
   }> {
-    console.log(`🔄 Starting full configuration reload...`);
+    console.log('🔄 Starting full configuration reload...');
     const startTime = Date.now();
 
     // Run reloads in parallel for performance
     const [serversResult, groupsResult] = await Promise.all([
       this.reloadServers(),
-      this.reloadGroups()
+      this.reloadGroups(),
     ]);
 
     const totalTime = Date.now() - startTime;
@@ -232,7 +246,7 @@ export class ConfigManager extends EventEmitter {
 
     return {
       servers: serversResult,
-      groups: groupsResult
+      groups: groupsResult,
     };
   }
 
@@ -293,6 +307,14 @@ export class ConfigManager extends EventEmitter {
       if (oldGroup.name !== newGroup.name) return true;
       if (!this.arraysEqual(oldGroup.serverIds || [], newGroup.serverIds || [], (a, b) => a === b)) return true;
       if (oldGroup.order !== newGroup.order) return true;
+
+      // Check new flexible layout fields
+      if (oldGroup.rowNumber !== newGroup.rowNumber) return true;
+      if (oldGroup.rowOrder !== newGroup.rowOrder) return true;
+
+      // Also check legacy fields for backward compatibility
+      if (oldGroup.row !== newGroup.row) return true;
+      if (oldGroup.position !== newGroup.position) return true;
     }
 
     return false;

@@ -400,7 +400,9 @@ export interface ServerConfig {
 export interface GroupConfig {
   id: string;
   name: string;
-  order: number;
+  order: number;                    // DEPRECATED, for backward compatibility
+  row?: number;                     // 1-4 (which row the group belongs to)
+  position?: 'left' | 'right';     // 'left' or 'right' position within the row
   serverIds: string[];
 }
 

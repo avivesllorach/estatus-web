@@ -34,11 +34,11 @@ export class SnmpService {
         port: 161,
         retries: this.RETRIES,
         timeout: this.TIMEOUT,
-        version: snmp.Version.Version2c
+        version: snmp.Version.Version2c,
       });
 
       const diskInfoPromises = disksToQuery.slice(0, 3).map((diskConfig) => 
-        this.queryStorageIndex(session, diskConfig.index, diskConfig.name)
+        this.queryStorageIndex(session, diskConfig.index, diskConfig.name),
       );
 
       const results = await Promise.allSettled(diskInfoPromises);
@@ -60,7 +60,7 @@ export class SnmpService {
       if (diskInfo.length === 0) {
         return { 
           success: false, 
-          error: `No disk data retrieved. Errors: ${errors.join('; ')}` 
+          error: `No disk data retrieved. Errors: ${errors.join('; ')}`, 
         };
       }
 
@@ -79,7 +79,7 @@ export class SnmpService {
       `${HR_STORAGE_DESCR}.${index}`,
       `${HR_STORAGE_ALLOCATION_UNITS}.${index}`,
       `${HR_STORAGE_SIZE}.${index}`,
-      `${HR_STORAGE_USED}.${index}`
+      `${HR_STORAGE_USED}.${index}`,
     ];
 
     return new Promise((resolve, reject) => {
@@ -92,7 +92,7 @@ export class SnmpService {
         try {
           // Check if all OIDs returned valid data
           const hasErrors = varbinds.some(vb => 
-            snmp.isVarbindError(vb) || vb.value === null || vb.value === undefined
+            snmp.isVarbindError(vb) || vb.value === null || vb.value === undefined,
           );
 
           if (hasErrors) {
@@ -123,9 +123,9 @@ export class SnmpService {
             used: Math.round(usedBytes / (1024 * 1024)),   // MB
             free: Math.round(freeBytes / (1024 * 1024)),   // MB
             percentage,
-            description: description,
-            index: index,
-            name: customName // Add custom name if provided
+            description,
+            index,
+            name: customName, // Add custom name if provided
           };
 
           resolve(diskInfo);

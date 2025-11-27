@@ -162,11 +162,11 @@ describe('writeConfigAtomic', () => {
       const complexData = {
         servers: [
           { id: '1', name: 'Server 1', config: { port: 8080, ssl: true } },
-          { id: '2', name: 'Server 2', config: { port: 9090, ssl: false } }
+          { id: '2', name: 'Server 2', config: { port: 9090, ssl: false } },
         ],
         groups: {
-          default: { order: 1, serverIds: ['1', '2'] }
-        }
+          default: { order: 1, serverIds: ['1', '2'] },
+        },
       };
 
       await writeConfigAtomic(testFilePath, complexData);
@@ -184,8 +184,8 @@ describe('writeConfigAtomic', () => {
         emptyString: '',
         nested: {
           nullNested: null,
-          arrayEmpty: []
-        }
+          arrayEmpty: [],
+        },
       };
 
       await writeConfigAtomic(testFilePath, config);
@@ -242,7 +242,7 @@ describe('readConfigFile', () => {
       boolean: true,
       nullValue: null,
       array: [1, 2, 3],
-      object: { nested: 'value' }
+      object: { nested: 'value' },
     };
 
     await fs.writeFile(testFilePath, JSON.stringify(typedData), 'utf-8');

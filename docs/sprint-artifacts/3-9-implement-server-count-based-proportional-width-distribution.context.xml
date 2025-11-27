@@ -1,0 +1,75 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>9</storyId>
+    <title>Implement Server-Count-Based Proportional Width Distribution</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-9-implement-server-count-based-proportional-width-distribution.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>server groups in the same row to distribute width proportionally based on their server count</iWant>
+    <soThat>groups with more servers get more visual space and groups with fewer servers take up less space</soThat>
+    <tasks>1. Modify layout calculation algorithm in layoutUtils.ts to count servers per group
+2. Replace equal width calculation with proportional width based on server count
+3. Add minimum width constraints to prevent groups from becoming too small
+4. Update Dashboard.tsx grid template columns to use calculated proportional widths
+5. Update ServerContainer components to handle variable widths gracefully
+6. Add empty state handling for groups with no servers
+7. Ensure responsive behavior and edge cases for proportional resizing
+8. Update existing tests and add new ones for proportional width calculations</tasks>
+  </story>
+
+  <acceptanceCriteria>1. Given multiple groups in the same row on the dashboard, When the dashboard renders, Then each group's width is calculated proportionally based on its server count relative to the total servers in that row
+2. Given Row 1 contains Group A (4 servers) and Group B (1 server), When the dashboard renders, Then Group A occupies 80% of the row width and Group B occupies 20% of the row width
+3. Given a row contains groups with varying server counts, When a server is added to or removed from any group in that row, Then all groups in that row automatically resize to maintain proportional distribution
+4. Given a group has no servers assigned, When the dashboard renders, Then the group displays a meaningful empty state and takes up minimal proportional width
+5. Given viewing groups on smaller screens, When the row contains many groups, Then proportional sizing respects minimum group width constraints (200px minimum)</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd.md" title="Product Requirements Document" section="Group Management (FR27-FR35)" snippet="Functional requirements for dashboard group management including server assignment and layout control"/>
+      <doc path="docs/architecture.md" title="System Architecture" section="Frontend Components" snippet="Dashboard component architecture and layout utilities for dynamic row-based group positioning"/>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="Dashboard Layout" snippet="Responsive design patterns for dashboard group layout and proportional sizing constraints"/>
+    </docs>
+    <code>
+      <artifact path="src/utils/layoutUtils.ts" kind="utility" symbol="createDynamicRowLayout" lines="45-121" reason="Core layout calculation algorithm that currently uses equal distribution - needs modification for proportional sizing"/>
+      <artifact path="src/utils/layoutUtils.ts" kind="utility" symbol="calculateRowGridClasses" lines="144-187" reason="CSS grid calculation utilities that need updating for proportional column templates"/>
+      <artifact path="src/components/Dashboard.tsx" kind="component" symbol="Dashboard" lines="164-200" reason="Main dashboard rendering component that applies CSS Grid layout using calculated column templates"/>
+      <artifact path="src/types/group.ts" kind="type" symbol="GroupConfig" reason="Type definition for group configuration including serverIds array used for proportional calculations"/>
+      <artifact path="backend/dashboard-layout.json" kind="data" reason="Configuration file containing group definitions with serverIds used for layout calculations"/>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="react" version="^18.0" />
+        <package name="typescript" version="^5.0" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use existing CSS Grid implementation rather than custom flexbox layouts</constraint>
+    <constraint type="pattern">Maintain backward compatibility with existing group configuration API</constraint>
+    <constraint type="pattern">Preserve responsive design with minimum 200px group width constraints</constraint>
+    <constraint type="testing">Update existing layout tests and add proportional distribution tests</constraint>
+    <constraint type="performance">Layout recalculation should not impact dashboard performance during real-time updates</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="LayoutGroup" kind="interface" signature="interface LayoutGroup extends GroupConfig { _width: string; }" path="src/utils/layoutUtils.ts"/>
+    <interface name="createDynamicRowLayout" kind="function" signature="function createDynamicRowLayout(groups: GroupConfig[], options?: LayoutOptions): DynamicLayout" path="src/utils/layoutUtils.ts"/>
+  </interfaces>
+  <tests>
+    <standards>Use Jest for unit tests, React Testing Library for component tests. Test proportional width calculations with various server count scenarios. Include edge cases for zero-server groups and minimum width constraints.</standards>
+    <locations>src/components/__tests__/Dashboard.dynamic-layout.test.tsx, src/utils/__tests__/layoutUtils.test.ts</locations>
+    <ideas>
+      <test ac="1">Test proportional width calculation with multiple groups having different server counts</test>
+      <test ac="2">Test specific 80/20 split scenario with 4-server vs 1-server groups</test>
+      <test ac="3">Test dynamic resizing when servers are added/removed from groups during runtime</test>
+      <test ac="4">Test empty state rendering for groups with zero servers assigned</test>
+      <test ac="5">Test minimum width constraints on responsive layouts with many groups</test>
+    </ideas>
+  </tests>
+</story-context>

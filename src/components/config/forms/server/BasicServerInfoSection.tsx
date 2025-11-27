@@ -17,7 +17,7 @@ interface BasicServerInfoSectionProps {
   onFieldChange: (field: string, value: string) => void;
   onValidationChange?: (errors: Record<string, string | null>) => void;
   isEditMode?: boolean;
-  serverIdInputRef?: React.RefObject<HTMLInputElement>;
+  serverNameInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export function BasicServerInfoSection({
@@ -28,7 +28,7 @@ export function BasicServerInfoSection({
   onFieldChange,
   onValidationChange,
   isEditMode = true,
-  serverIdInputRef
+  serverNameInputRef
 }: BasicServerInfoSectionProps) {
   // Validation error state
   const [errors, setErrors] = useState<Record<string, string | null>>({
@@ -62,24 +62,26 @@ export function BasicServerInfoSection({
 
   return (
     <FormSection title="Basic Information">
-      <FormRow>
-        <FormGroup
-          label="Server ID"
-          required
-          helperText="Unique identifier"
-          htmlFor="server-id"
-        >
-          <Input
-            id="server-id"
-            ref={serverIdInputRef}
-            value={serverId}
-            onChange={(e) => onFieldChange('id', e.target.value)}
-            disabled={isEditMode}
-            className={isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}
-            placeholder="e.g., aragó-01"
-          />
-        </FormGroup>
+      {/* Server ID field - read-only in edit mode, hidden in add mode */}
+      {isEditMode && (
+        <FormRow>
+          <FormGroup
+            label="Server ID"
+            helperText="System-assigned identifier (read-only)"
+            htmlFor="server-id"
+          >
+            <Input
+              id="server-id"
+              value={serverId}
+              disabled
+              className="bg-gray-100 cursor-not-allowed"
+              readOnly
+            />
+          </FormGroup>
+        </FormRow>
+      )}
 
+      <FormRow>
         <FormGroup
           label="Server Name"
           required
@@ -88,6 +90,7 @@ export function BasicServerInfoSection({
         >
           <Input
             id="server-name"
+            ref={serverNameInputRef}
             value={serverName}
             onChange={(e) => onFieldChange('name', e.target.value)}
             onBlur={handleNameBlur}

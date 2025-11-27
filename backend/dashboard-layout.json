@@ -1,32 +1,3 @@
 {
-  "groups": [
-    {
-      "id": "group-1",
-      "name": "ARAGÓ UPDATED",
-      "order": 1,
-      "serverIds": [
-        "server-002",
-        "server-003",
-        "server-004",
-        "server-009",
-        "server-010"
-      ]
-    },
-    {
-      "id": "group-2",
-      "name": "PROVENÇA",
-      "order": 2,
-      "serverIds": [
-        "server-005",
-        "server-006",
-        "server-007"
-      ]
-    },
-    {
-      "id": "group-3",
-      "name": "Test SSE Group",
-      "order": 1,
-      "serverIds": []
-    }
-  ]
+  "groups": []
 }

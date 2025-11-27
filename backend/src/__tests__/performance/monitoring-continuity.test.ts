@@ -4,8 +4,8 @@ import { ServerConfig } from '../../types/server';
 // Mock dependencies
 jest.mock('ping', () => ({
   promise: {
-    probe: jest.fn()
-  }
+    probe: jest.fn(),
+  },
 }));
 
 describe('Monitoring Continuity Performance Tests', () => {
@@ -18,7 +18,7 @@ describe('Monitoring Continuity Performance Tests', () => {
     mockPing.mockResolvedValue({
       alive: true,
       time: 10,
-      output: 'Reply from 192.168.1.1: bytes=32 time=10ms TTL=64'
+      output: 'Reply from 192.168.1.1: bytes=32 time=10ms TTL=64',
     });
   });
 
@@ -35,7 +35,7 @@ describe('Monitoring Continuity Performance Tests', () => {
         id: `perf-server-${i + 1}`,
         name: `Performance Server ${i + 1}`,
         ip: `192.168.1.${10 + i}`,
-        dnsAddress: `perf${i + 1}.example.com`
+        dnsAddress: `perf${i + 1}.example.com`,
       }));
 
       pingService = new PingService(servers);
@@ -56,7 +56,7 @@ describe('Monitoring Continuity Performance Tests', () => {
         id: `new-perf-server-${i + 1}`,
         name: `New Performance Server ${i + 1}`,
         ip: `192.168.1.${20 + i}`,
-        dnsAddress: `newperf${i + 1}.example.com`
+        dnsAddress: `newperf${i + 1}.example.com`,
       }));
 
       const configChangeStartTime = Date.now();
@@ -112,8 +112,8 @@ describe('Monitoring Continuity Performance Tests', () => {
           id: 'base-server',
           name: 'Base Server',
           ip: '192.168.1.1',
-          dnsAddress: 'base.example.com'
-        }
+          dnsAddress: 'base.example.com',
+        },
       ];
 
       pingService = new PingService(initialServers);
@@ -136,8 +136,8 @@ describe('Monitoring Continuity Performance Tests', () => {
             id: `rapid-server-${i}`,
             name: `Rapid Server ${i}`,
             ip: `192.168.1.${10 + i}`,
-            dnsAddress: `rapid${i}.example.com`
-          }
+            dnsAddress: `rapid${i}.example.com`,
+          },
         ];
 
         const preChangeTime = pingService.getServerStatus('base-server')!.lastChecked.getTime();
@@ -172,8 +172,8 @@ describe('Monitoring Continuity Performance Tests', () => {
           id: 'existing-server',
           name: 'Existing Server',
           ip: '192.168.1.1',
-          dnsAddress: 'existing.example.com'
-        }
+          dnsAddress: 'existing.example.com',
+        },
       ];
 
       pingService = new PingService(initialServers);
@@ -186,7 +186,7 @@ describe('Monitoring Continuity Performance Tests', () => {
         id: `startup-server-${i + 1}`,
         name: `Startup Server ${i + 1}`,
         ip: `192.168.1.${10 + i}`,
-        dnsAddress: `startup${i + 1}.example.com`
+        dnsAddress: `startup${i + 1}.example.com`,
       }));
 
       const startupTimes: number[] = [];
@@ -236,7 +236,7 @@ describe('Monitoring Continuity Performance Tests', () => {
         id: `removal-server-${i + 1}`,
         name: `Removal Server ${i + 1}`,
         ip: `192.168.1.${10 + i}`,
-        dnsAddress: `removal${i + 1}.example.com`
+        dnsAddress: `removal${i + 1}.example.com`,
       }));
 
       pingService = new PingService(servers);
@@ -269,7 +269,7 @@ describe('Monitoring Continuity Performance Tests', () => {
 
       // Check for events from removed servers
       const removedServerEvents = eventsAfterRemoval.filter(
-        ({ event }) => serversToRemove.includes(event.serverId)
+        ({ event }) => serversToRemove.includes(event.serverId),
       );
 
       expect(removedServerEvents).toHaveLength(0);
@@ -300,8 +300,8 @@ describe('Monitoring Continuity Performance Tests', () => {
           id: 'memory-test-server',
           name: 'Memory Test Server',
           ip: '192.168.1.1',
-          dnsAddress: 'memory.example.com'
-        }
+          dnsAddress: 'memory.example.com',
+        },
       ];
 
       pingService = new PingService(initialServers);
@@ -323,8 +323,8 @@ describe('Monitoring Continuity Performance Tests', () => {
             id: `memory-server-${i}`,
             name: `Memory Server ${i}`,
             ip: `192.168.1.${10 + (i % 10)}`, // Reuse IPs to test cleanup
-            dnsAddress: `memory${i}.example.com`
-          }
+            dnsAddress: `memory${i}.example.com`,
+          },
         ];
 
         await pingService.onConfigChange(configWithAddition);
@@ -375,8 +375,8 @@ describe('Monitoring Continuity Performance Tests', () => {
           id: 'concurrent-base',
           name: 'Concurrent Base Server',
           ip: '192.168.1.1',
-          dnsAddress: 'concurrent.example.com'
-        }
+          dnsAddress: 'concurrent.example.com',
+        },
       ];
 
       pingService = new PingService(baseServers);
@@ -391,8 +391,8 @@ describe('Monitoring Continuity Performance Tests', () => {
           id: `concurrent-server-${i}`,
           name: `Concurrent Server ${i}`,
           ip: `192.168.1.${10 + i}`,
-          dnsAddress: `concurrent${i}.example.com`
-        }
+          dnsAddress: `concurrent${i}.example.com`,
+        },
       ]);
 
       // Execute changes concurrently

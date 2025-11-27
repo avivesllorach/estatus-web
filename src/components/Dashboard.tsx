@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ServerContainer } from './ServerContainer';
 import { apiService, ServerData, GroupConfig } from '../services/api';
+import { createDynamicRowLayout, migrateLegacyGroups, calculateRowGridClasses, generateProportionalGridTemplateColumns } from '../utils/layoutUtils';
 
 export function Dashboard() {
   const [servers, setServers] = useState<ServerData[]>([]);
@@ -45,34 +46,63 @@ export function Dashboard() {
     };
   }, []);
 
-  // Create container groups from groups configuration and server data
-  const createContainerGroups = (serverList: ServerData[], groupList: GroupConfig[]) => {
-    if (serverList.length === 0 || groupList.length === 0) return [];
+  // Create dynamic row layout with flexible sizing
+  const createDynamicLayout = (serverList: ServerData[], groupList: GroupConfig[]) => {
+    if (serverList.length === 0 || groupList.length === 0) {
+      return {
+        layout: { rows: [], totalRows: 0, groupsPerRow: [], maxGroupsPerRow: 0 },
+        serverData: []
+      };
+    }
 
     // Create a map for fast server lookup
     const serverMap = new Map(serverList.map(server => [server.id, server]));
 
-    // Sort groups by order, then by name for consistency
-    const sortedGroups = [...groupList].sort((a, b) => a.order - b.order);
+    // Migrate legacy groups to new format (if any)
+    const migratedGroups = migrateLegacyGroups(groupList);
 
-    // Create groups with their assigned servers
-    return sortedGroups
-      .filter(group => group.serverIds.length > 0) // Only show groups with servers
-      .map(group => {
+    // Include ALL groups (even those with no servers) to support empty states
+    // Groups with no servers should still appear with proportional sizing
+    const allGroups = migratedGroups;
+
+    if (allGroups.length === 0) {
+      return {
+        layout: { rows: [], totalRows: 0, groupsPerRow: [], maxGroupsPerRow: 0 },
+        serverData: []
+      };
+    }
+
+    // Create dynamic layout with all groups (proportional width handles zero servers)
+    const layout = createDynamicRowLayout(allGroups);
+
+    // Attach server data to each group
+    const serverData = layout.rows.map(row => ({
+      rowNumber: row.rowNumber,
+      groups: row.groups.map(group => {
         const groupServers = group.serverIds
           .map(serverId => serverMap.get(serverId))
-          .filter((server): server is ServerData => server !== undefined); // Filter out undefined servers
+          .filter((server): server is ServerData => server !== undefined);
 
         return {
+          group: {
+            id: group.id,
+            name: group.name,
+            order: group.order,
+            serverIds: group.serverIds,
+            rowNumber: group.rowNumber,
+            rowOrder: group.rowOrder
+          },
           servers: groupServers,
-          count: groupServers.length,
-          title: group.name,
+          serverCount: groupServers.length,
+          width: group._width
         };
       })
-      .filter(group => group.servers.length > 0); // Filter out groups with no valid servers
+    }));
+
+    return { layout, serverData };
   };
 
-  const containerGroups = createContainerGroups(servers, groups);
+  const { layout, serverData } = createDynamicLayout(servers, groups);
 
   if (loading) {
     return (
@@ -109,21 +139,72 @@ export function Dashboard() {
 
   return (
     <div className="h-screen bg-gray-300 overflow-hidden flex flex-col">
-
-      <div className="flex-1 flex flex-col gap-4 max-h-full p-4">
-        {containerGroups.map((container) => (
-          <div
-            key={container.title}
-            className="flex-1"
-            style={{ flex: container.count || 1 }}
-          >
-            <ServerContainer
-              title={container.title}
-              servers={container.servers}
-              serverCount={container.count}
-            />
+      <div className="flex-1 flex flex-col gap-4 max-h-full p-4 overflow-y-auto">
+        {serverData.length === 0 ? (
+          // Empty state when no groups have servers
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-gray-500 mb-4">
+                <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Server Groups Found</h3>
+              <p className="text-gray-600 mb-4">
+                {groups.length === 0
+                  ? "Create groups and assign servers to see them displayed here."
+                  : "Assign servers to groups to see them displayed here."
+                }
+              </p>
+              <p className="text-sm text-gray-500">
+                Visit the configuration page to manage groups and server assignments.
+              </p>
+            </div>
           </div>
-        ))}
+        ) : (
+          // Render dynamic rows
+          serverData.map((rowData) => {
+            const groupCount = rowData.groups.length;
+            const gridClasses = calculateRowGridClasses(groupCount);
+
+            // Generate proportional grid template columns using the calculated widths
+            const proportionalGridTemplate = generateProportionalGridTemplateColumns(rowData.groups.map(g => ({
+              ...g.group,
+              _width: g.width || '0%'
+            } as any)));
+
+            return (
+              <div
+                key={rowData.rowNumber}
+                className="flex-shrink-0"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: proportionalGridTemplate,
+                  gap: '1rem',
+                  minHeight: '200px'
+                }}
+              >
+                {rowData.groups.map((groupData, groupIndex) => (
+                  <div
+                    key={groupData.group.id}
+                    className="min-h-0"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%'
+                    }}
+                  >
+                    <ServerContainer
+                      title={groupData.group.name}
+                      servers={groupData.servers}
+                      serverCount={groupData.serverCount}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

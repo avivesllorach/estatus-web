@@ -10,6 +10,21 @@ import { useToast } from '@/hooks/use-toast';
 import { useConflictDetection } from '@/hooks/use-conflict-detection';
 import '@/styles/smooth-updates.css';
 
+// Transform ServerConfig to ServerData for group assignment functionality
+function transformServerConfigToServerData(serverConfigs: ServerConfig[]): ServerData[] {
+  return serverConfigs.map(server => ({
+    id: server.id,
+    name: server.name,
+    ip: server.ip,
+    isOnline: true, // Default to true for config servers - status comes from monitoring
+    consecutiveSuccesses: server.consecutiveSuccesses || 0,
+    consecutiveFailures: server.consecutiveFailures || 0,
+    lastChecked: new Date().toISOString(), // Use current time since config servers may not have monitoring data
+    lastStatusChange: new Date().toISOString(),
+    diskInfo: null // Config servers don't need disk info for assignment
+  }));
+}
+
 export function ConfigPage() {
   const [servers, setServers] = useState<ServerConfig[]>([]);
   const [groups, setGroups] = useState<GroupConfig[]>([]);
@@ -279,7 +294,7 @@ export function ConfigPage() {
         selectedServerName={selectedServerName}
         selectedServer={selectedServerConfig}
         selectedGroup={groups.find(g => g.id === selectedGroupId) || null}
-        servers={[]} // Pass empty array since MainPanel uses selectedServer for editing
+        servers={transformServerConfigToServerData(servers)} // Transform config servers to ServerData for group assignment
         groups={groups}
         onNavigationRequest={handleNavigationRequest}
         onGroupsRefresh={fetchGroups}

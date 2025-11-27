@@ -17,7 +17,6 @@ class ServerMonitoringApp {
   constructor() {
     this.app = express();
     this.setupMiddleware();
-    this.setupRoutes();
     this.setupErrorHandling();
   }
 
@@ -34,7 +33,7 @@ class ServerMonitoringApp {
       console.log(`💓 Health check: http://localhost:${PORT}/health`);
       console.log(`📡 API endpoints: http://localhost:${PORT}/api/servers`);
       console.log(`🔄 Real-time events: http://localhost:${PORT}/api/events`);
-      console.log(`🔧 Hot-reload configuration management enabled`);
+      console.log('🔧 Hot-reload configuration management enabled');
     });
   }
 
@@ -44,7 +43,7 @@ class ServerMonitoringApp {
       origin: CORS_ORIGIN,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
-      credentials: true
+      credentials: true,
     }));
 
     // Body parsing middleware
@@ -78,6 +77,9 @@ class ServerMonitoringApp {
       // Start monitoring
       this.pingService.start();
 
+      // Set up routes after services are initialized
+      this.setupRoutes();
+
       console.log('✅ Services initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize services:', error);
@@ -97,9 +99,9 @@ class ServerMonitoringApp {
         // Update PingService with new server configuration
         await this.pingService.onConfigChange(event.servers);
 
-        console.log(`✅ PingService updated with new configuration`);
+        console.log('✅ PingService updated with new configuration');
       } catch (error) {
-        console.error(`❌ Failed to update PingService with configuration change:`, error);
+        console.error('❌ Failed to update PingService with configuration change:', error);
       }
     });
 
@@ -127,7 +129,7 @@ class ServerMonitoringApp {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         serverCount: this.pingService.getServerCount(),
-        onlineCount: this.pingService.getOnlineCount()
+        onlineCount: this.pingService.getOnlineCount(),
       });
     });
 
@@ -140,7 +142,7 @@ class ServerMonitoringApp {
     this.app.use('*', (req, res) => {
       res.status(404).json({
         success: false,
-        error: 'Route not found'
+        error: 'Route not found',
       });
     });
   }
@@ -151,7 +153,7 @@ class ServerMonitoringApp {
       console.error('Unhandled error:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     });
 

@@ -15,6 +15,9 @@ interface SNMPConfigSectionProps {
 export function SNMPConfigSection({ snmpConfig, onChange }: SNMPConfigSectionProps) {
   // State
   const [enabled, setEnabled] = useState(snmpConfig?.enabled || false);
+  const [community, setCommunity] = useState(
+    snmpConfig?.community || 'public' // Default to 'public'
+  );
   const [storageIndexes, setStorageIndexes] = useState(
     snmpConfig?.storageIndexes ? snmpConfig.storageIndexes.join(',') : ''
   );
@@ -25,6 +28,7 @@ export function SNMPConfigSection({ snmpConfig, onChange }: SNMPConfigSectionPro
   // Update parent when state changes
   const updateConfig = (updates: Partial<{
     enabled: boolean;
+    community: string;
     storageIndexes: string;
     diskMappings: DiskConfig[];
   }>) => {
@@ -34,6 +38,7 @@ export function SNMPConfigSection({ snmpConfig, onChange }: SNMPConfigSectionPro
 
     const newConfig: SnmpConfig = {
       enabled: updates.enabled !== undefined ? updates.enabled : enabled,
+      community: updates.community !== undefined ? updates.community : community,
       storageIndexes: storageIndexesValue
         .split(',')
         .map(s => s.trim())
@@ -49,6 +54,11 @@ export function SNMPConfigSection({ snmpConfig, onChange }: SNMPConfigSectionPro
   const handleEnabledChange = (checked: boolean) => {
     setEnabled(checked);
     updateConfig({ enabled: checked });
+  };
+
+  const handleCommunityChange = (value: string) => {
+    setCommunity(value);
+    updateConfig({ community: value });
   };
 
   const handleStorageIndexesChange = (value: string) => {
@@ -91,6 +101,24 @@ export function SNMPConfigSection({ snmpConfig, onChange }: SNMPConfigSectionPro
           Enable SNMP monitoring
         </label>
       </div>
+
+      {/* SNMP Community String Input */}
+      <FormGroup
+        label="Community String"
+        htmlFor="snmp-community"
+        helperText="SNMP community password"
+        required
+      >
+        <Input
+          id="snmp-community"
+          type="password"
+          value={community}
+          onChange={(e) => handleCommunityChange(e.target.value)}
+          disabled={!enabled}
+          className={!enabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+          placeholder="public"
+        />
+      </FormGroup>
 
       {/* Storage Indexes Input */}
       <FormGroup

@@ -11,13 +11,13 @@ export function createServerRoutes(pingService: PingService): Router {
       const servers = pingService.getAllServerStatus();
       const response: ApiResponse<ServerStatus[]> = {
         success: true,
-        data: servers
+        data: servers,
       };
       res.json(response);
     } catch (error) {
       const response: ApiResponse<never> = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
       res.status(500).json(response);
     }
@@ -32,20 +32,20 @@ export function createServerRoutes(pingService: PingService): Router {
       if (!server) {
         const response: ApiResponse<never> = {
           success: false,
-          error: 'Server not found'
+          error: 'Server not found',
         };
         return res.status(404).json(response);
       }
 
       const response: ApiResponse<ServerStatus> = {
         success: true,
-        data: server
+        data: server,
       };
       res.json(response);
     } catch (error) {
       const response: ApiResponse<never> = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
       res.status(500).json(response);
     }
@@ -62,18 +62,18 @@ export function createServerRoutes(pingService: PingService): Router {
         total: totalServers,
         online: onlineServers,
         offline: offlineServers,
-        uptime: totalServers > 0 ? Math.round((onlineServers / totalServers) * 100) : 0
+        uptime: totalServers > 0 ? Math.round((onlineServers / totalServers) * 100) : 0,
       };
 
       const response: ApiResponse<typeof stats> = {
         success: true,
-        data: stats
+        data: stats,
       };
       res.json(response);
     } catch (error) {
       const response: ApiResponse<never> = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
       res.status(500).json(response);
     }

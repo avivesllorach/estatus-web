@@ -14,7 +14,7 @@ export function createHealthRoute(pingService: PingService, configManager?: Conf
       const healthCheck = pingService.getHealthCheck();
 
       const statusCode = healthCheck.status === 'healthy' ? 200 :
-                        healthCheck.status === 'degraded' ? 200 : 503;
+        healthCheck.status === 'degraded' ? 200 : 503;
 
       res.status(statusCode).json({
         status: healthCheck.status,
@@ -24,13 +24,13 @@ export function createHealthRoute(pingService: PingService, configManager?: Conf
         onlinePercentage: healthCheck.onlinePercentage,
         lastConfigChange: healthCheck.lastConfigChange,
         recentGapCount: healthCheck.recentGapCount,
-        averagePingTime: healthCheck.averagePingTime
+        averagePingTime: healthCheck.averagePingTime,
       });
     } catch (error) {
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -61,7 +61,7 @@ export function createHealthRoute(pingService: PingService, configManager?: Conf
           uptimeFormatted: formatUptime(metrics.monitoringUptime),
           snmpEnabledCount: metrics.snmpEnabledCount,
           netappEnabledCount: metrics.netappEnabledCount,
-          lastStateTransition: metrics.lastStateTransition
+          lastStateTransition: metrics.lastStateTransition,
         },
         performance: {
           averageGapDuration: performance.averageGapDuration,
@@ -71,19 +71,19 @@ export function createHealthRoute(pingService: PingService, configManager?: Conf
           gapsOver5Seconds: performance.gapsOver5Seconds,
           gapsUnder5SecondsPercentage: performance.gapCount > 0
             ? Math.round((performance.gapsUnder5Seconds / performance.gapCount) * 100 * 100) / 100
-            : 100
+            : 100,
         },
         recentGaps: recentGaps.map(gap => ({
           serverId: gap.serverId,
           duration: gap.duration,
           startTime: gap.startTime.toISOString(),
-          endTime: gap.endTime.toISOString()
-        }))
+          endTime: gap.endTime.toISOString(),
+        })),
       });
     } catch (error) {
       res.status(500).json({
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -119,22 +119,22 @@ export function createHealthRoute(pingService: PingService, configManager?: Conf
           maxGapDuration: performance.maxGapDuration,
           gapsUnder5Seconds: performance.gapsUnder5Seconds,
           gapsOver5Seconds: performance.gapsOver5Seconds,
-          continuityScore: calculateContinuityScore(performance)
+          continuityScore: calculateContinuityScore(performance),
         },
         serviceStatus: {
           totalServers: healthCheck.serverCount,
           onlinePercentage: healthCheck.onlinePercentage,
           averagePingTime: healthCheck.averagePingTime,
-          lastConfigChange: healthCheck.lastConfigChange
+          lastConfigChange: healthCheck.lastConfigChange,
         },
-        recommendations: generateRecommendations(performance, healthCheck, gapsLastHour)
+        recommendations: generateRecommendations(performance, healthCheck, gapsLastHour),
       };
 
       res.status(200).json(continuityReport);
     } catch (error) {
       res.status(500).json({
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -201,7 +201,7 @@ function calculateContinuityScore(performance: {
 function generateRecommendations(
   performance: any,
   healthCheck: any,
-  recentGaps: any[]
+  recentGaps: any[],
 ): string[] {
   const recommendations: string[] = [];
 

@@ -6,14 +6,14 @@ jest.mock('ping');
 
 jest.mock('../../services/snmpService', () => ({
   SnmpService: {
-    getDiskInfo: jest.fn()
-  }
+    getDiskInfo: jest.fn(),
+  },
 }));
 
 jest.mock('../../services/netappService', () => ({
   NetAppService: {
-    getLunInfo: jest.fn()
-  }
+    getLunInfo: jest.fn(),
+  },
 }));
 
 describe('PingService Monitoring State Preservation', () => {
@@ -32,23 +32,23 @@ describe('PingService Monitoring State Preservation', () => {
     mockPing.mockResolvedValue({
       alive: true,
       time: 10,
-      output: 'Reply from 192.168.1.1: bytes=32 time=10ms TTL=64'
+      output: 'Reply from 192.168.1.1: bytes=32 time=10ms TTL=64',
     });
 
     // Default successful SNMP response
     mockSnmpService.mockResolvedValue({
       success: true,
       diskInfo: [
-        { id: '1', name: 'C:', total: 1000, used: 500, free: 500, percentage: 50 }
-      ]
+        { id: '1', name: 'C:', total: 1000, used: 500, free: 500, percentage: 50 },
+      ],
     });
 
     // Default successful NetApp response
     mockNetappService.mockResolvedValue({
       success: true,
       diskInfo: [
-        { id: 'lun1', name: 'vol1_lun1', total: 2000, used: 1000, free: 1000, percentage: 50 }
-      ]
+        { id: 'lun1', name: 'vol1_lun1', total: 2000, used: 1000, free: 1000, percentage: 50 },
+      ],
     });
   });
 
@@ -65,14 +65,14 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'server-1',
         name: 'Server 1',
         ip: '192.168.1.1',
-        dnsAddress: 'server1.example.com'
+        dnsAddress: 'server1.example.com',
       },
       {
         id: 'server-2',
         name: 'Server 2',
         ip: '192.168.1.2',
-        dnsAddress: 'server2.example.com'
-      }
+        dnsAddress: 'server2.example.com',
+      },
     ];
 
     it('should maintain monitoring for unchanged servers during configuration update', async () => {
@@ -91,14 +91,14 @@ describe('PingService Monitoring State Preservation', () => {
         ...initialServers.slice(0, 1), // server-1 unchanged
         {
           ...initialServers[1],
-          name: 'Server 2 Updated' // server-2 updated
+          name: 'Server 2 Updated', // server-2 updated
         },
         {
           id: 'server-3',
           name: 'Server 3',
           ip: '192.168.1.3',
-          dnsAddress: 'server3.example.com'
-        }
+          dnsAddress: 'server3.example.com',
+        },
       ];
 
       // Process configuration change
@@ -132,7 +132,7 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'server-3',
         name: 'Server 3',
         ip: '192.168.1.3',
-        dnsAddress: 'server3.example.com'
+        dnsAddress: 'server3.example.com',
       };
 
       await pingService.onConfigChange([...initialServers, newServer]);
@@ -188,8 +188,8 @@ describe('PingService Monitoring State Preservation', () => {
         {
           ...initialServers[1],
           name: 'Server 2 Modified',
-          ip: '192.168.1.20' // Changed IP
-        }
+          ip: '192.168.1.20', // Changed IP
+        },
       ];
 
       await pingService.onConfigChange(modifiedServers);
@@ -220,14 +220,14 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'perf-server-1',
         name: 'Performance Server 1',
         ip: '192.168.1.1',
-        dnsAddress: 'perf1.example.com'
+        dnsAddress: 'perf1.example.com',
       },
       {
         id: 'perf-server-2',
         name: 'Performance Server 2',
         ip: '192.168.1.2',
-        dnsAddress: 'perf2.example.com'
-      }
+        dnsAddress: 'perf2.example.com',
+      },
     ];
 
     it('should maintain monitoring gaps under 5 seconds for unaffected servers', async () => {
@@ -245,7 +245,7 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'perf-server-3',
         name: 'Performance Server 3',
         ip: '192.168.1.3',
-        dnsAddress: 'perf3.example.com'
+        dnsAddress: 'perf3.example.com',
       };
 
       const configChangeStart = Date.now();
@@ -279,7 +279,7 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'new-perf-server',
         name: 'New Performance Server',
         ip: '192.168.1.3',
-        dnsAddress: 'newperf.example.com'
+        dnsAddress: 'newperf.example.com',
       };
 
       const additionStart = Date.now();
@@ -313,7 +313,7 @@ describe('PingService Monitoring State Preservation', () => {
 
       // Removed server should not emit events
       const removedServerEvents = statusChangeSpy.mock.calls.filter(
-        call => call[0].serverId === 'perf-server-2'
+        call => call[0].serverId === 'perf-server-2',
       );
       expect(removedServerEvents).toHaveLength(0);
 
@@ -333,9 +333,9 @@ describe('PingService Monitoring State Preservation', () => {
           enabled: true,
           storageIndexes: [1],
           disks: [
-            { index: 1, name: 'C Drive' }
-          ]
-        }
+            { index: 1, name: 'C Drive' },
+          ],
+        },
       },
       {
         id: 'netapp-server',
@@ -348,10 +348,10 @@ describe('PingService Monitoring State Preservation', () => {
           username: 'admin',
           password: 'password',
           luns: [
-            { id: 'lun1', description: 'Test LUN' }
-          ]
-        }
-      }
+            { id: 'lun1', description: 'Test LUN' },
+          ],
+        },
+      },
     ];
 
     it('should preserve SNMP monitoring during configuration changes', async () => {
@@ -369,7 +369,7 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'new-server',
         name: 'New Server',
         ip: '192.168.1.3',
-        dnsAddress: 'new.example.com'
+        dnsAddress: 'new.example.com',
       };
 
       await pingService.onConfigChange([...serversWithMonitoring, newServer]);
@@ -416,14 +416,14 @@ describe('PingService Monitoring State Preservation', () => {
           id: 'healthy-server',
           name: 'Healthy Server',
           ip: '192.168.1.1',
-          dnsAddress: 'healthy.example.com'
+          dnsAddress: 'healthy.example.com',
         },
         {
           id: 'failing-server',
           name: 'Failing Server',
           ip: '192.168.1.2',
-          dnsAddress: 'failing.example.com'
-        }
+          dnsAddress: 'failing.example.com',
+        },
       ];
 
       // Configure ping to fail for one server
@@ -432,13 +432,13 @@ describe('PingService Monitoring State Preservation', () => {
           return Promise.resolve({
             alive: false,
             time: 0,
-            output: 'Request timeout'
+            output: 'Request timeout',
           });
         }
         return Promise.resolve({
           alive: true,
           time: 10,
-          output: 'Reply from 192.168.1.1'
+          output: 'Reply from 192.168.1.1',
         });
       });
 
@@ -460,7 +460,7 @@ describe('PingService Monitoring State Preservation', () => {
         id: 'new-server',
         name: 'New Server',
         ip: '192.168.1.3',
-        dnsAddress: 'new.example.com'
+        dnsAddress: 'new.example.com',
       };
 
       await expect(pingService.onConfigChange([...servers, newServer])).resolves.not.toThrow();
@@ -475,8 +475,8 @@ describe('PingService Monitoring State Preservation', () => {
           id: 'server-1',
           name: 'Server 1',
           ip: '192.168.1.1',
-          dnsAddress: 'server1.example.com'
-        }
+          dnsAddress: 'server1.example.com',
+        },
       ];
 
       pingService = new PingService(servers);
@@ -494,8 +494,8 @@ describe('PingService Monitoring State Preservation', () => {
           id: '', // Invalid empty ID
           name: 'Invalid Server',
           ip: '192.168.1.2',
-          dnsAddress: 'invalid.example.com'
-        }
+          dnsAddress: 'invalid.example.com',
+        },
       ];
 
       // The service should handle errors gracefully
@@ -517,8 +517,8 @@ describe('PingService Monitoring State Preservation', () => {
           id: 'cleanup-server',
           name: 'Cleanup Server',
           ip: '192.168.1.1',
-          dnsAddress: 'cleanup.example.com'
-        }
+          dnsAddress: 'cleanup.example.com',
+        },
       ];
 
       pingService = new PingService(servers);
@@ -546,8 +546,8 @@ describe('PingService Monitoring State Preservation', () => {
           id: 'rapid-server',
           name: 'Rapid Server',
           ip: '192.168.1.1',
-          dnsAddress: 'rapid.example.com'
-        }
+          dnsAddress: 'rapid.example.com',
+        },
       ];
 
       pingService = new PingService(servers);
@@ -563,10 +563,10 @@ describe('PingService Monitoring State Preservation', () => {
           id: 'rapid-server-2',
           name: 'Rapid Server 2',
           ip: '192.168.1.2',
-          dnsAddress: 'rapid2.example.com'
+          dnsAddress: 'rapid2.example.com',
         }],
         [servers[0]], // Remove new server
-        [] // Remove original
+        [], // Remove original
       ];
 
       for (const config of changes) {

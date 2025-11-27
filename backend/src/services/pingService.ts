@@ -52,7 +52,7 @@ export class PingService extends EventEmitter {
         consecutiveFailures: 0,
         lastChecked: new Date(),
         lastStatusChange: new Date(),
-        diskInfo: null
+        diskInfo: null,
       };
       this.serverStatusMap.set(server.id, initialStatus);
     });
@@ -62,7 +62,7 @@ export class PingService extends EventEmitter {
     try {
       const response = await ping.promise.probe(ip, {
         timeout: PING_TIMEOUT / 1000, // ping library expects seconds
-        min_reply: 1
+        min_reply: 1,
       });
 
       const success = response.alive;
@@ -80,13 +80,13 @@ export class PingService extends EventEmitter {
       return {
         success,
         responseTime,
-        error: success ? undefined : 'Host unreachable'
+        error: success ? undefined : 'Host unreachable',
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown ping error';
       return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     }
   }
@@ -222,7 +222,7 @@ export class PingService extends EventEmitter {
       ip: serverStatus.ip,
       isOnline: serverStatus.isOnline,
       previousStatus,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('statusChange', statusUpdate);
@@ -233,7 +233,7 @@ export class PingService extends EventEmitter {
       serverId: serverStatus.id,
       name: serverStatus.name,
       diskInfo: serverStatus.diskInfo || null,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('diskUpdate', diskUpdate);
@@ -352,7 +352,7 @@ export class PingService extends EventEmitter {
           this.checkLunStatus(server.id);
         }, SNMP_INTERVAL);
 
-        this.snmpIntervals.set(server.id + '_lun', lunInterval);
+        this.snmpIntervals.set(`${server.id}_lun`, lunInterval);
       }
     });
 
@@ -462,7 +462,7 @@ export class PingService extends EventEmitter {
         consecutiveFailures: 0,
         lastChecked: new Date(),
         lastStatusChange: new Date(),
-        diskInfo: null
+        diskInfo: null,
       };
       this.serverStatusMap.set(server.id, initialStatus);
     });
@@ -501,7 +501,7 @@ export class PingService extends EventEmitter {
           this.checkLunStatus(server.id);
         }, SNMP_INTERVAL);
 
-        this.snmpIntervals.set(server.id + '_lun', lunInterval);
+        this.snmpIntervals.set(`${server.id}_lun`, lunInterval);
       }
     });
 
@@ -533,10 +533,10 @@ export class PingService extends EventEmitter {
       }
 
       // Clear NetApp LUN intervals
-      const lunInterval = this.snmpIntervals.get(serverId + '_lun');
+      const lunInterval = this.snmpIntervals.get(`${serverId}_lun`);
       if (lunInterval) {
         clearInterval(lunInterval);
-        this.snmpIntervals.delete(serverId + '_lun');
+        this.snmpIntervals.delete(`${serverId}_lun`);
       }
 
       // Remove from server status map
@@ -588,7 +588,7 @@ export class PingService extends EventEmitter {
             consecutiveFailures: 0,
             lastChecked: new Date(),
             lastStatusChange: new Date(),
-            diskInfo: null
+            diskInfo: null,
           };
           this.serverStatusMap.set(updatedServer.id, initialStatus);
         }
@@ -618,10 +618,10 @@ export class PingService extends EventEmitter {
     }
 
     // Clear NetApp LUN intervals
-    const lunInterval = this.snmpIntervals.get(serverId + '_lun');
+    const lunInterval = this.snmpIntervals.get(`${serverId}_lun`);
     if (lunInterval) {
       clearInterval(lunInterval);
-      this.snmpIntervals.delete(serverId + '_lun');
+      this.snmpIntervals.delete(`${serverId}_lun`);
     }
   }
 
@@ -662,7 +662,7 @@ export class PingService extends EventEmitter {
         this.checkLunStatus(server.id);
       }, SNMP_INTERVAL);
 
-      this.snmpIntervals.set(server.id + '_lun', lunInterval);
+      this.snmpIntervals.set(`${server.id}_lun`, lunInterval);
     }
   }
 
@@ -709,14 +709,14 @@ export class PingService extends EventEmitter {
         await this.addServers(added);
       }
 
-      console.log(`✅ Configuration change processed successfully`);
+      console.log('✅ Configuration change processed successfully');
 
       const configChangeEndTime = new Date();
       const configChangeDuration = configChangeEndTime.getTime() - configChangeStartTime.getTime();
       console.log(`📊 Configuration change processed in ${configChangeDuration}ms`);
 
     } catch (error) {
-      console.error(`❌ Error processing configuration change:`, error);
+      console.error('❌ Error processing configuration change:', error);
       throw error;
     }
   }
@@ -728,7 +728,7 @@ export class PingService extends EventEmitter {
     added: ServerConfig[],
     removed: ServerConfig[],
     updated: ServerConfig[],
-    startTime: Date
+    startTime: Date,
   ): void {
     // For removed servers, record the monitoring gap from their last check
     removed.forEach(server => {
@@ -738,7 +738,7 @@ export class PingService extends EventEmitter {
           serverId: server.id,
           startTime: lastStatus.lastChecked,
           endTime: startTime,
-          duration: startTime.getTime() - lastStatus.lastChecked.getTime()
+          duration: startTime.getTime() - lastStatus.lastChecked.getTime(),
         };
         this.monitoringGaps.push(gap);
         console.log(`📊 Monitoring gap recorded for ${server.name}: ${gap.duration}ms`);
@@ -753,7 +753,7 @@ export class PingService extends EventEmitter {
           serverId: server.id,
           startTime: lastStatus.lastChecked,
           endTime: startTime,
-          duration: startTime.getTime() - lastStatus.lastChecked.getTime()
+          duration: startTime.getTime() - lastStatus.lastChecked.getTime(),
         };
         this.monitoringGaps.push(gap);
         console.log(`📊 Configuration change gap for ${server.name}: ${gap.duration}ms`);
@@ -802,7 +802,7 @@ export class PingService extends EventEmitter {
       monitoringUptime,
       snmpEnabledCount,
       netappEnabledCount,
-      lastStateTransition
+      lastStateTransition,
     };
   }
 
@@ -824,14 +824,14 @@ export class PingService extends EventEmitter {
     gapCount: number;
     gapsUnder5Seconds: number;
     gapsOver5Seconds: number;
-  } {
+    } {
     if (this.monitoringGaps.length === 0) {
       return {
         averageGapDuration: 0,
         maxGapDuration: 0,
         gapCount: 0,
         gapsUnder5Seconds: 0,
-        gapsOver5Seconds: 0
+        gapsOver5Seconds: 0,
       };
     }
 
@@ -846,7 +846,7 @@ export class PingService extends EventEmitter {
       maxGapDuration,
       gapCount: this.monitoringGaps.length,
       gapsUnder5Seconds,
-      gapsOver5Seconds
+      gapsOver5Seconds,
     };
   }
 
@@ -861,7 +861,7 @@ export class PingService extends EventEmitter {
     lastConfigChange: Date | null;
     recentGapCount: number;
     averagePingTime: number;
-  } {
+    } {
     const metrics = this.getMonitoringMetrics();
     const performance = this.getMonitoringPerformance();
     const now = new Date();
@@ -891,7 +891,7 @@ export class PingService extends EventEmitter {
       onlinePercentage: Math.round(onlinePercentage * 100) / 100,
       lastConfigChange: metrics.lastConfigChange || null,
       recentGapCount: recentGaps.length,
-      averagePingTime: metrics.averagePingTime
+      averagePingTime: metrics.averagePingTime,
     };
   }
 }

@@ -41,13 +41,13 @@ describe('Atomic Write Integration Tests', () => {
         'server-1': {
           name: 'Test Server 1',
           ip: '192.168.1.100',
-          dnsAddress: 'server1.example.com'
+          dnsAddress: 'server1.example.com',
         },
         'server-2': {
           name: 'Test Server 2',
           ip: '192.168.1.101',
-          dnsAddress: 'server2.example.com'
-        }
+          dnsAddress: 'server2.example.com',
+        },
       };
 
       await writeConfigAtomic(serversPath, serversConfig);
@@ -71,8 +71,8 @@ describe('Atomic Write Integration Tests', () => {
         'server-1': {
           name: 'Test Server',
           ip: '192.168.1.100',
-          dnsAddress: 'server.example.com'
-        }
+          dnsAddress: 'server.example.com',
+        },
       };
 
       // Create initial file with specific permissions
@@ -95,15 +95,15 @@ describe('Atomic Write Integration Tests', () => {
             id: 'group-1',
             name: 'Test Group 1',
             order: 1,
-            serverIds: ['server-1', 'server-2']
+            serverIds: ['server-1', 'server-2'],
           },
           {
             id: 'group-2',
             name: 'Test Group 2',
             order: 2,
-            serverIds: ['server-3']
-          }
-        ]
+            serverIds: ['server-3'],
+          },
+        ],
       };
 
       await writeConfigAtomic(layoutPath, layoutConfig);
@@ -126,16 +126,16 @@ describe('Atomic Write Integration Tests', () => {
   describe('Concurrent Atomic Writes', () => {
     it('should handle atomic writes to different files independently', async () => {
       const serversConfig = {
-        'server-1': { name: 'Server 1', ip: '192.168.1.100' }
+        'server-1': { name: 'Server 1', ip: '192.168.1.100' },
       };
       const layoutConfig = {
-        groups: [{ id: 'group-1', name: 'Group 1', order: 1, serverIds: [] }]
+        groups: [{ id: 'group-1', name: 'Group 1', order: 1, serverIds: [] }],
       };
 
       // Execute writes to different files
       await Promise.all([
         writeConfigAtomic(serversPath, serversConfig),
-        writeConfigAtomic(layoutPath, layoutConfig)
+        writeConfigAtomic(layoutPath, layoutConfig),
       ]);
 
       // Verify both files were written correctly
@@ -153,8 +153,8 @@ describe('Atomic Write Integration Tests', () => {
       const config = {
         servers: [
           { id: 'server-1', name: 'Test Server 1', ip: '192.168.1.100' },
-          { id: 'server-2', name: 'Test Server 2', ip: '192.168.1.101' }
-        ]
+          { id: 'server-2', name: 'Test Server 2', ip: '192.168.1.101' },
+        ],
       };
 
       await writeConfigAtomic(serversPath, config);
@@ -179,11 +179,11 @@ describe('Atomic Write Integration Tests', () => {
       const config = {
         servers: [
           { id: '1', name: 'Server 1', config: { port: 8080, ssl: true } },
-          { id: '2', name: 'Server 2', config: { port: 9090, ssl: false } }
+          { id: '2', name: 'Server 2', config: { port: 9090, ssl: false } },
         ],
         groups: {
-          default: { order: 1, serverIds: ['1', '2'] }
-        }
+          default: { order: 1, serverIds: ['1', '2'] },
+        },
       };
 
       await writeConfigAtomic(layoutPath, config);
@@ -208,7 +208,7 @@ describe('Atomic Write Integration Tests', () => {
         emptyObject: {},
         nullValue: null,
         zeroValue: 0,
-        emptyString: ''
+        emptyString: '',
       };
 
       await writeConfigAtomic(serversPath, config);

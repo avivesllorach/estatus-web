@@ -1,0 +1,256 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>8</storyId>
+    <title>Implement Dynamic Group Row Layout with Flexible Sizing</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/3-8-implement-dynamic-group-row-layout-with-flexible-sizing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user managing dashboard groups</asA>
+    <iWant>to arrange groups in rows with automatic flexible sizing and customizable ordering</iWant>
+    <soThat>I can fit any number of groups in a row and control their display order</soThat>
+    <tasks>- [ ] **Task 1:** Extend GroupConfig data structure (AC: 1, 2)
+  - [ ] Add `rowNumber` property to GroupConfig interface
+  - [ ] Add `rowOrder` property to GroupConfig interface
+  - [ ] Update TypeScript types in frontend and backend
+
+- [ ] **Task 2:** Update group configuration form (AC: 2)
+  - [ ] Add "Row Number" field to GroupForm (number input, default: 1)
+  - [ ] Add "Row Order" field to GroupForm (number input, default: next available)
+  - [ ] Add validation for positive integers
+  - [ ] Update backend validation for new fields
+
+- [ ] **Task 3:** Implement dynamic row layout algorithm (AC: 1, 3, 4, 5)
+  - [ ] Replace fixed 4×2 grid with flexible row-based layout
+  - [ ] Create `createDynamicRowLayout()` function in Dashboard.tsx
+  - [ ] Calculate group widths based on count per row (100% / groupCount)
+  - [ ] Apply CSS Grid with `grid-template-columns: repeat(auto-fit, minmax(minWidth, 1fr))`
+
+- [ ] **Task 4:** Update dashboard rendering logic (AC: 1, 3, 4, 5)
+  - [ ] Modify `Dashboard.tsx` to use new layout algorithm
+  - [ ] Group servers by `rowNumber` instead of fixed `row` property
+  - [ ] Sort groups within each row by `rowOrder` ascending
+  - [ ] Render rows dynamically based on actual group data
+
+- [ ] **Task 5:** Enhance ServerContainer for flexible widths (AC: 3, 4, 5)
+  - [ ] Update `ServerContainer.tsx` to accept dynamic width
+  - [ ] Remove fixed grid assumptions from server cards
+  - [ ] Ensure server cards adapt to container width
+
+- [ ] **Task 6:** Add migration support for existing groups (AC: 1)
+  - [ ] Update group loading to handle missing `rowNumber`/`rowOrder` (default to row 1, order 1)
+  - [ ] Ensure backward compatibility with existing group data
+
+- [ ] **Task 7:** Implement SSE real-time updates (AC: 6)
+  - [ ] Extend `groupsChanged` SSE event with new layout data
+  - [ ] Update dashboard to re-render layout on group changes
+  - [ ] Test multi-client synchronization
+
+- [ ] **Task 8:** Add comprehensive testing (AC: 1-6)
+  - [ ] Unit tests for `createDynamicRowLayout()` function
+  - [ ] Integration tests for group CRUD with new fields
+  - [ ] Visual tests for different group configurations (1, 2, 3+ groups per row)</tasks>
+  </story>
+
+  <acceptanceCriteria>1. **Given** I have created groups in the configuration UI
+   **When** I view the dashboard
+   **Then** groups are arranged in flexible rows instead of a fixed 4×2 grid
+   **And** each row automatically adjusts group widths to fit all groups in that row
+
+2. **Given** I want to control group ordering within rows
+   **When** I edit a group in the configuration UI
+   **Then** I can set a "row order" number that determines the position within the row
+   **And** groups are displayed left-to-right in ascending row order
+
+3. **Given** I have 3 groups assigned to row 1
+   **When** the dashboard renders
+   **Then** each group occupies 33.33% of the row width
+   **And** all 3 groups fit perfectly in the row
+
+4. **Given** I have 2 groups assigned to row 1
+   **When** the dashboard renders
+   **Then** each group occupies 50% of the row width
+   **And** both groups fit side-by-side in the row
+
+5. **Given** I have 1 group assigned to row 1
+   **When** the dashboard renders
+   **Then** the group occupies 100% of the row width
+   **And** the group spans the full width
+
+6. **Given** I modify group assignments or row ordering
+   **When** I save the changes
+   **Then** the dashboard immediately updates to reflect the new layout
+   **And** the changes propagate to all connected dashboard clients via SSE</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>Functional Requirements - Group Management (FR27-FR35)</section>
+        <snippet>Users can create, edit, delete, and reorder groups, then assign servers to them. Groups are organized by display order on the dashboard.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Data Architecture - dashboard-layout.json</section>
+        <snippet>Group configuration with properties: id, name, order, serverIds. Groups reference servers via foreign key pattern for data integrity.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Real-Time Architecture - SSE Event Extensions</section>
+        <snippet>groupsChanged event broadcasts full groups array for dashboard reorganization in real-time across all clients.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Epic 3: Dashboard Group Management</section>
+        <snippet>Complete group CRUD operations, server assignment to groups, display order controls, and real-time updates via SSE.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>Component Patterns - FormSection, FormGroup</section>
+        <snippet>Standardized form components with consistent spacing, validation patterns, and shadcn/ui integration for group configuration.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/types/group.ts</path>
+        <kind>interface</kind>
+        <symbol>GroupConfig</symbol>
+        <lines>1-10</lines>
+        <reason>Current group data structure to extend with rowNumber, rowOrder properties</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/Dashboard.tsx</path>
+        <kind>component</kind>
+        <symbol>create4RowLayout</symbol>
+        <lines>49-105</lines>
+        <reason>Fixed grid layout algorithm to replace with dynamic row layout</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/Dashboard.tsx</path>
+        <kind>component</kind>
+        <symbol>Dashboard</symbol>
+        <lines>144-172</lines>
+        <reason>Fixed grid rendering to replace with flexible row-based layout</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/ServerContainer.tsx</path>
+        <kind>component</kind>
+        <symbol>ServerContainer</symbol>
+        <lines>24-45</lines>
+        <reason>Already supports flexible widths - ready for new layout integration</reason>
+      </artifact>
+      <artifact>
+        <path>src/components/groups/GroupForm.tsx</path>
+        <kind>component</kind>
+        <symbol>GroupForm</symbol>
+        <lines>108-984</lines>
+        <reason>Enhance with rowNumber, rowOrder form fields using existing validation patterns</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/routes/config.ts</path>
+        <kind>controller</kind>
+        <symbol>groupValidation</symbol>
+        <lines>141-615</lines>
+        <reason>Extend existing validation for new rowNumber, rowOrder fields</reason>
+      </artifact>
+      <artifact>
+        <path>backend/src/routes/events.ts</path>
+        <kind>controller</kind>
+        <symbol>groupsChanged SSE event</symbol>
+        <lines>96-102</lines>
+        <reason>Extend SSE event to broadcast new layout data for real-time updates</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="frontend">
+        <framework name="react" version="^18.2.0" purpose="UI framework" />
+        <framework name="typescript" version="^5.2.2" purpose="Type safety" />
+        <framework name="vite" version="^4.5.3" purpose="Build tool" />
+        <framework name="tailwindcss" version="^3.4.3" purpose="CSS framework" />
+        <framework name="react-router-dom" version="^7.9.6" purpose="Routing" />
+        <framework name="@radix-ui/react-*" versions="^1.x-^2.x" purpose="shadcn/ui primitives" />
+        <framework name="class-variance-authority" version="^0.7.1" purpose="Component variation" />
+        <framework name="tailwind-merge" version="^3.4.0" purpose="CSS class merging" />
+        <framework name="lucide-react" version="^0.554.0" purpose="Icons" />
+      </ecosystem>
+      <ecosystem name="backend">
+        <framework name="express" version="^4.18.2" purpose="Web framework" />
+        <framework name="typescript" version="^5.3.3" purpose="Type safety" />
+        <framework name="fs-extra" version="^11.3.2" purpose="File system operations" />
+        <framework name="jest" version="^30.2.0" purpose="Testing framework" />
+        <framework name="cors" version="^2.8.5" purpose="Cross-origin resource sharing" />
+        <framework name="uuid" version="^13.0.0" purpose="Unique ID generation" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Backward compatibility required - existing groups without new fields default to row 1, order 1</constraint>
+    <constraint>Performance requirement - layout calculation must complete in &lt;100ms for &lt;50 groups</constraint>
+    <constraint>Must use existing shadcn/ui component library and established form validation patterns</constraint>
+    <constraint>Leverage existing SSE infrastructure for real-time updates - no new connection patterns</constraint>
+    <constraint>Follow established error handling patterns from group CRUD operations</constraint>
+    <constraint>Maintain responsive design within row constraints</constraint>
+    <constraint>Use atomic file write pattern for configuration changes</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>GroupConfig</name>
+      <kind>interface</kind>
+      <signature>interface GroupConfig {
+  id: string;
+  name: string;
+  order: number;
+  row?: number;
+  position?: 'left' | 'right';
+  serverIds: string[];
+}</signature>
+      <path>src/types/group.ts</path>
+    </interface>
+    <interface>
+      <name>group management APIs</name>
+      <kind>REST endpoints</kind>
+      <signature>POST /api/config/groups
+PUT /api/config/groups/:id
+DELETE /api/config/groups/:id</signature>
+      <path>backend/src/routes/config.ts</path>
+    </interface>
+    <interface>
+      <name>groupsChanged SSE event</name>
+      <kind>SSE event</kind>
+      <signature>{ type: 'groupsChanged', groups: GroupConfig[] }</signature>
+      <path>backend/src/routes/events.ts</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>Use Jest for unit testing, React Testing Library for component testing, and Supertest for API integration testing. Follow existing patterns with describe/test blocks, mock external dependencies, and maintain >80% test coverage. Tests should be colocated with source files in __tests__ directories.</standards>
+    <locations>src/components/**/__tests__/*.test.tsx for frontend component tests, backend/src/**/__tests__/*.test.ts for backend service tests, and integration tests in backend/src/__tests__/integration/ for end-to-end testing.</locations>
+    <ideas>
+      <test>
+        <ac>AC 1</ac>
+        <description>Unit test createDynamicRowLayout function to verify flexible row calculation for various group counts</description>
+      </test>
+      <test>
+        <ac>AC 2</ac>
+        <description>Integration test group form validation for rowNumber and rowOrder fields</description>
+      </test>
+      <test>
+        <ac>AC 3, 4, 5</ac>
+        <description>Visual tests for dashboard rendering with 1, 2, and 3+ groups per row to verify width distribution</description>
+      </test>
+      <test>
+        <ac>AC 6</ac>
+        <description>Integration test SSE groupsChanged event triggers dashboard layout re-render</description>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

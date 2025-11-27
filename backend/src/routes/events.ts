@@ -14,7 +14,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
+      'Access-Control-Allow-Headers': 'Cache-Control',
     });
 
     // Send initial connection message
@@ -24,14 +24,14 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
     const servers = pingService.getAllServerStatus();
     res.write(`data: ${JSON.stringify({
       type: 'initial',
-      servers: servers
+      servers,
     })}\n\n`);
 
     // Listen for status changes
     const onStatusChange = (statusUpdate: StatusUpdate) => {
       res.write(`data: ${JSON.stringify({
         type: 'statusChange',
-        update: statusUpdate
+        update: statusUpdate,
       })}\n\n`);
     };
 
@@ -39,7 +39,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
     const onDiskUpdate = (diskUpdate: DiskUpdate) => {
       res.write(`data: ${JSON.stringify({
         type: 'diskUpdate',
-        update: diskUpdate
+        update: diskUpdate,
       })}\n\n`);
     };
 
@@ -61,7 +61,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
           type: 'serversChanged',
           servers: event.servers,
           delta: event.delta,
-          timestamp: event.timestamp
+          timestamp: event.timestamp,
         })}\n\n`);
       };
 
@@ -70,7 +70,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
         servers.forEach(server => {
           res.write(`data: ${JSON.stringify({
             type: 'serverAdded',
-            server: server
+            server,
           })}\n\n`);
         });
       };
@@ -79,7 +79,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
         servers.forEach(server => {
           res.write(`data: ${JSON.stringify({
             type: 'serverUpdated',
-            server: server
+            server,
           })}\n\n`);
         });
       };
@@ -88,7 +88,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
         servers.forEach(server => {
           res.write(`data: ${JSON.stringify({
             type: 'serverRemoved',
-            serverId: server.id
+            serverId: server.id,
           })}\n\n`);
         });
       };
@@ -97,7 +97,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
       onGroupsChanged = (event: any) => {
         res.write(`data: ${JSON.stringify({
           type: 'groupsChanged',
-          groups: event.groups
+          groups: event.groups,
         })}\n\n`);
       };
 
@@ -113,7 +113,7 @@ export function createEventsRoute(pingService: PingService, configManager?: Conf
     const heartbeat = setInterval(() => {
       res.write(`data: ${JSON.stringify({
         type: 'heartbeat',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       })}\n\n`);
     }, 30000);
 

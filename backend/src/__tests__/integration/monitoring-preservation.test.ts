@@ -8,20 +8,20 @@ import { Server } from 'http';
 // Mock all external dependencies
 jest.mock('ping', () => ({
   promise: {
-    probe: jest.fn()
-  }
+    probe: jest.fn(),
+  },
 }));
 
 jest.mock('../../services/snmpService', () => ({
   SnmpService: {
-    getDiskInfo: jest.fn()
-  }
+    getDiskInfo: jest.fn(),
+  },
 }));
 
 jest.mock('../../services/netappService', () => ({
   NetAppService: {
-    getLunInfo: jest.fn()
-  }
+    getLunInfo: jest.fn(),
+  },
 }));
 
 // Mock file system operations for ConfigManager
@@ -31,12 +31,12 @@ jest.mock('fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
   watchFile: jest.fn(),
-  unwatchFile: jest.fn()
+  unwatchFile: jest.fn(),
 }));
 
 // Mock atomic file utilities
 jest.mock('../../utils/fileUtils', () => ({
-  writeConfigAtomic: jest.fn()
+  writeConfigAtomic: jest.fn(),
 }));
 
 describe('Monitoring State Preservation Integration Tests', () => {
@@ -53,16 +53,16 @@ describe('Monitoring State Preservation Integration Tests', () => {
         id: 'integration-server-1',
         name: 'Integration Server 1',
         ip: '192.168.1.1',
-        dnsAddress: 'server1.integration.com'
+        dnsAddress: 'server1.integration.com',
       },
       {
         id: 'integration-server-2',
         name: 'Integration Server 2',
         ip: '192.168.1.2',
-        dnsAddress: 'server2.integration.com'
-      }
+        dnsAddress: 'server2.integration.com',
+      },
     ],
-    groups: []
+    groups: [],
   };
 
   beforeEach(() => {
@@ -74,7 +74,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
     mockPing.mockResolvedValue({
       alive: true,
       time: '15',
-      output: 'Reply from 192.168.1.1: bytes=32 time=15ms TTL=64'
+      output: 'Reply from 192.168.1.1: bytes=32 time=15ms TTL=64',
     });
 
     // Mock file system for ConfigManager
@@ -135,10 +135,10 @@ describe('Monitoring State Preservation Integration Tests', () => {
             id: 'integration-server-3',
             name: 'Integration Server 3',
             ip: '192.168.1.3',
-            dnsAddress: 'server3.integration.com'
-          }
+            dnsAddress: 'server3.integration.com',
+          },
         ],
-        groups: []
+        groups: [],
       };
 
       const fs = require('fs');
@@ -185,7 +185,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
       // Simulate server removal configuration change
       const configWithRemoval = {
         servers: [initialConfig.servers[0]], // Keep only server-1
-        groups: []
+        groups: [],
       };
 
       const fs = require('fs');
@@ -209,7 +209,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
 
       // Verify no events from removed server
       const removedServerUpdates = remainingServerUpdates.filter(
-        update => update.serverId === 'integration-server-2'
+        update => update.serverId === 'integration-server-2',
       );
       expect(removedServerUpdates).toHaveLength(0);
     });
@@ -248,7 +248,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
         id: 'sse-new-server',
         name: 'SSE New Server',
         ip: '192.168.1.4',
-        dnsAddress: 'ssenew.integration.com'
+        dnsAddress: 'ssenew.integration.com',
       };
 
       await pingService.onConfigChange([...initialConfig.servers, newServer]);
@@ -292,16 +292,16 @@ describe('Monitoring State Preservation Integration Tests', () => {
           initialConfig.servers[0], // Keep server-1
           {
             ...initialConfig.servers[1],
-            name: 'Integration Server 2 Updated' // Update server-2
+            name: 'Integration Server 2 Updated', // Update server-2
           },
           {
             id: 'sse-new-server',
             name: 'SSE New Server',
             ip: '192.168.1.4',
-            dnsAddress: 'ssenew.integration.com'
-          }
+            dnsAddress: 'ssenew.integration.com',
+          },
         ],
-        groups: []
+        groups: [],
       };
 
       // Apply configuration changes
@@ -345,7 +345,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
         id: 'perf-test-server',
         name: 'Performance Test Server',
         ip: '192.168.1.5',
-        dnsAddress: 'perftest.integration.com'
+        dnsAddress: 'perftest.integration.com',
       };
 
       const configChangeStart = Date.now();
@@ -388,7 +388,7 @@ describe('Monitoring State Preservation Integration Tests', () => {
         id: 'quick-start-server',
         name: 'Quick Start Server',
         ip: '192.168.1.6',
-        dnsAddress: 'quickstart.integration.com'
+        dnsAddress: 'quickstart.integration.com',
       };
 
       const additionStart = Date.now();
@@ -421,23 +421,23 @@ describe('Monitoring State Preservation Integration Tests', () => {
           id: 'concurrent-1',
           name: 'Concurrent Server 1',
           ip: '192.168.1.7',
-          dnsAddress: 'concurrent1.integration.com'
+          dnsAddress: 'concurrent1.integration.com',
         }],
         // Update server
         [
           initialConfig.servers[0],
           {
             ...initialConfig.servers[1],
-            name: 'Integration Server 2 Updated Concurrently'
-          }
+            name: 'Integration Server 2 Updated Concurrently',
+          },
         ],
         // Remove server and add new
         [initialConfig.servers[0], {
           id: 'concurrent-2',
           name: 'Concurrent Server 2',
           ip: '192.168.1.8',
-          dnsAddress: 'concurrent2.integration.com'
-        }]
+          dnsAddress: 'concurrent2.integration.com',
+        }],
       ];
 
       // Execute configuration changes concurrently
@@ -479,8 +479,8 @@ describe('Monitoring State Preservation Integration Tests', () => {
             id: `rapid-server-${i}`,
             name: `Rapid Server ${i}`,
             ip: `192.168.1.${10 + i}`,
-            dnsAddress: `rapid${i}.integration.com`
-          }
+            dnsAddress: `rapid${i}.integration.com`,
+          },
         ];
 
         await pingService.onConfigChange(configWithNewServer);
