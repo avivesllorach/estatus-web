@@ -9,7 +9,7 @@ import { createLogger, generateChangeSummary } from '../utils/logger';
 import { detectServerChanges, detectGroupChanges } from '../utils/changeDetector';
 import { migrateLegacyGroups } from '../utils/groupMigration';
 
-interface GroupConfig {
+export interface GroupConfig {
   id: string;
   name: string;
   order: number;                    // DEPRECATED, for backward compatibility
@@ -119,7 +119,7 @@ router.get('/groups', async (req: Request, res: Response) => {
       groups = migrateLegacyGroups(groups);
 
       // If migration occurred, update the file with new format
-      const needsMigration = groups.some((group, index) => {
+      const needsMigration = groups.some((group: GroupConfig, index: number) => {
         const original = layout.groups[index];
         return (
           original.rowNumber !== group.rowNumber ||
