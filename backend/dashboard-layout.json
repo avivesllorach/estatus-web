@@ -1,5 +1,15 @@
 {
   "groups": [
-    
+    {
+      "id": "group-1",
+      "name": "group",
+      "order": null,
+      "serverIds": [
+        "server-001",
+        "server-002"
+      ],
+      "rowNumber": 1,
+      "rowOrder": 1
+    }
   ]
 }
