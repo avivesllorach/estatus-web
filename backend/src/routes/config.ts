@@ -749,16 +749,19 @@ router.post('/servers', async (req: Request, res: Response) => {
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        logger.debug('Triggering hot-reload after server creation');
+        console.log('🔄 Hot-reload: Starting after server creation for server:', serverData.id);
         await configManager.reloadServers();
-        logger.debug('Hot-reload completed successfully after server creation');
+        console.log('✅ Hot-reload: Completed successfully after server creation');
       } catch (reloadError) {
+        console.error('❌ Hot-reload: Failed after server creation:', reloadError);
         logger.error('Failed to trigger hot-reload after server creation', {
           serverId: serverData.id,
           error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
         });
         // Don't fail the request, just log the error
       }
+    } else {
+      logger.error('ConfigManager is NULL/undefined in server creation endpoint');
     }
 
     // Log successful server creation
@@ -870,16 +873,19 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        logger.debug('Triggering hot-reload after server update');
+        console.log('🔄 Hot-reload: Starting after server update for server:', id);
         await configManager.reloadServers();
-        logger.debug('Hot-reload completed successfully after server update');
+        console.log('✅ Hot-reload: Completed successfully after server update');
       } catch (reloadError) {
+        console.error('❌ Hot-reload: Failed after server update:', reloadError);
         logger.error('Failed to trigger hot-reload after server update', {
           serverId: id,
           error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
         });
         // Don't fail the request, just log the error
       }
+    } else {
+      logger.error('ConfigManager is NULL/undefined in server update endpoint');
     }
 
     // Log successful server update with changes
@@ -968,16 +974,19 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
     const configManager = (req as any).configManager as ConfigManager;
     if (configManager) {
       try {
-        logger.debug('Triggering hot-reload after server deletion');
+        console.log('🔄 Hot-reload: Starting after server deletion for server:', id);
         await configManager.reloadServers();
-        logger.debug('Hot-reload completed successfully after server deletion');
+        console.log('✅ Hot-reload: Completed successfully after server deletion');
       } catch (reloadError) {
+        console.error('❌ Hot-reload: Failed after server deletion:', reloadError);
         logger.error('Failed to trigger hot-reload after server deletion', {
           serverId: id,
           error: reloadError instanceof Error ? reloadError.message : 'Unknown error',
         });
         // Don't fail the request, just log the error
       }
+    } else {
+      logger.error('ConfigManager is NULL/undefined in server deletion endpoint');
     }
 
     // Log successful server deletion
@@ -1068,13 +1077,19 @@ router.delete('/servers/:id', async (req: Request, res: Response) => {
  * @returns Express router with config endpoints
  */
 export function createConfigRoutes(configManager: ConfigManager): Router {
+  // Create a new router instance for this specific configManager
+  const configRouter = Router();
+
   // Add middleware to attach configManager to all requests
-  router.use((req: Request, res: Response, next: NextFunction) => {
+  configRouter.use((req: Request, res: Response, next: NextFunction) => {
     (req as any).configManager = configManager;
     next();
   });
 
-  return router;
+  // Copy all routes from the main router to this new router
+  configRouter.use(router);
+
+  return configRouter;
 }
 
 export default router; // Keep default export for backward compatibility

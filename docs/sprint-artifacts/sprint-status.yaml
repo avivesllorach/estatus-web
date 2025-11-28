@@ -80,4 +80,5 @@ development_status:
   4-6-preserve-monitoring-state-during-configuration-changes: done
   4-7-implement-backend-logging-for-configuration-changes: done
   4-8-fix-snmp-configuration-validation-for-existing-servers: done
+  4-9-fix-configmanager-hot-reload-execution: review
   epic-4-retrospective: optional
