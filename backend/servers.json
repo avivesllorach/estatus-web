@@ -1,3 +1,40 @@
 [
- 
+  {
+    "id": "server-001",
+    "name": "riveradius",
+    "ip": "1.1.1.1",
+    "netapp": {
+      "enabled": false,
+      "apiType": "rest",
+      "username": "",
+      "password": "",
+      "luns": []
+    },
+    "dnsAddress": "test.local",
+    "snmpConfig": {
+      "enabled": false,
+      "community": "public",
+      "storageIndexes": [],
+      "diskNames": []
+    }
+  },
+  {
+    "id": "server-002",
+    "name": "test",
+    "ip": "1.2.3.4",
+    "netapp": {
+      "enabled": false,
+      "apiType": "rest",
+      "username": "",
+      "password": "",
+      "luns": []
+    },
+    "dnsAddress": "test.test",
+    "snmpConfig": {
+      "enabled": false,
+      "community": "public",
+      "storageIndexes": [],
+      "diskNames": []
+    }
+  }
 ]
