@@ -1,8 +1,8 @@
 [
   {
     "id": "server-001",
-    "name": "riveradius",
-    "ip": "1.1.1.1",
+    "name": "vCENTER",
+    "ip": "172.17.1.1",
     "netapp": {
       "enabled": false,
       "apiType": "rest",
@@ -10,18 +10,72 @@
       "password": "",
       "luns": []
     },
-    "dnsAddress": "test.local",
-    "snmpConfig": {
-      "enabled": false,
-      "community": "public",
-      "storageIndexes": [],
-      "diskNames": []
+    "dnsAddress": "amdahl.eada.es",
+    "snmp": {
+      "enabled": true,
+      "community": "M7rs54Ax",
+      "disks": [
+        {
+          "index": 27,
+          "name": "LOG"
+        }
+      ]
     }
   },
   {
     "id": "server-002",
+    "name": "RITCHIE",
+    "ip": "172.17.1.55",
+    "netapp": {
+      "enabled": true,
+      "apiType": "zapi",
+      "username": "admin_api",
+      "password": "Impala2020.",
+      "luns": [
+        {
+          "name": "DEV2",
+          "path": "/vol/VOL_ESX_DEV2/LUN_ESX_DEV2"
+        },
+        {
+          "name": "PROD2",
+          "path": "/vol/VOL_ESX_PROD2/LUN_ESX_PROD2"
+        }
+      ]
+    },
+    "dnsAddress": "ritchie.eada.es",
+    "snmp": {
+      "enabled": false,
+      "community": "public",
+      "disks": []
+    }
+  },
+  {
+    "id": "server-003",
+    "name": "ECKERT",
+    "ip": "192.1.50.25",
+    "netapp": {
+      "enabled": false,
+      "apiType": "rest",
+      "username": "",
+      "password": "",
+      "luns": []
+    },
+    "dnsAddress": "eckert.eada.es",
+    "snmp": {
+      "enabled": true,
+      "community": "M7rs54Ax",
+      "disks": [
+        {
+          "index": 36,
+          "name": "test"
+        }
+      ]
+    }
+  },
+  {
+    "id": "server-004",
     "name": "test",
-    "ip": "1.2.3.4",
+    "ip": "1.1.1.1",
     "netapp": {
       "enabled": false,
       "apiType": "rest",

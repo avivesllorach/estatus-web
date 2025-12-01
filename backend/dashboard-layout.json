@@ -5,10 +5,39 @@
       "name": "group",
       "order": null,
       "serverIds": [
-        "server-001",
-        "server-002"
+        "server-001"
       ],
       "rowNumber": 1,
+      "rowOrder": 1
+    },
+    {
+      "id": "group-2",
+      "name": "group2",
+      "order": null,
+      "serverIds": [
+        "server-002"
+      ],
+      "rowNumber": 2,
+      "rowOrder": 1
+    },
+    {
+      "id": "group-3",
+      "name": "group3",
+      "order": null,
+      "serverIds": [
+        "server-003"
+      ],
+      "rowNumber": 3,
+      "rowOrder": 1
+    },
+    {
+      "id": "group-4",
+      "name": "group4",
+      "order": null,
+      "serverIds": [
+        "server-004"
+      ],
+      "rowNumber": 4,
       "rowOrder": 1
     }
   ]
